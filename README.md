@@ -1,12 +1,14 @@
 # ORDVELA
 
-**ORDVELA** is the selected master-brand direction for a technology and business-systems ecosystem focused on software, AI, automation, infrastructure, APIs, digital products, and future ventures.
+**ORDVELA** is the locked master brand for a technology and business-systems ecosystem focused on software, AI, automation, infrastructure, APIs, digital products, services, and future ventures.
 
-> **Brand status:** Selected direction — verification required before legal/domain lock.
+> **Brand status:** `LOCKED` — operational master-brand decision.
 
 ## Current Decision
 
-The Batch 7 naming research selected **ORDVELA** as the intended brand direction. It is not being treated as legally cleared yet. Domain, social-handle, and formal trademark verification remain required before irreversible external commitments.
+The Batch 7 naming research selected **ORDVELA** as the intended master brand. The owner subsequently performed direct checks for the target domain and Indonesian trademark/PDKI screening and found no blocker for proceeding with the brand.
+
+This repository now treats ORDVELA as the active master-brand source of truth. The operational lock is not a substitute for formal legal advice or trademark registration.
 
 ### Brand hierarchy
 
@@ -17,7 +19,7 @@ The Batch 7 naming research selected **ORDVELA** as the intended brand direction
 
 ## Repository Purpose
 
-This repository is the source of truth for Ordvela's brand strategy, naming evidence, verification gates, architecture, identity direction, and future implementation prompts.
+This repository is the source of truth for Ordvela's brand strategy, naming evidence, clearance/verification record, architecture, identity direction, ownership conventions, and implementation prompts.
 
 ## Documentation
 
@@ -31,10 +33,11 @@ This repository is the source of truth for Ordvela's brand strategy, naming evid
 - `docs/07_GENSPARK_IMPLEMENTATION_PROMPT.md` — implementation prompt for Genspark
 - `docs/08_ROADMAP.md` — verification-to-launch roadmap and gates
 - `docs/09_DECISION_LOG.md` — auditable decisions and status changes
-
-## Evidence Rule
-
-Aesthetic preference is not evidence of ownership. No domain, social handle, or trademark is described as available or safe until the corresponding verification has been performed and recorded.
+- `docs/10_ORDVELA_VERIFICATION_REPORT_2026-09-17.md` — verification research record
+- `docs/11_ORDVELA_DIRECT_VERIFICATION_CHECKLIST_2026-09-17.md` — direct verification checklist
+- `docs/12_ORDVELA_CLEARANCE_GATE_RESULT_2026-09-17.md` — clearance gate record
+- `docs/13_ORDVELA_DIRECT_VERIFICATION_PASS_2026-09-17.md` — direct verification pass
+- `docs/14_ORDVELA_BRAND_LOCK.md` — master-brand lock decision
 
 ## Status Vocabulary
 
@@ -45,6 +48,6 @@ Aesthetic preference is not evidence of ownership. No domain, social handle, or 
 - `BLOCKED` — cannot proceed without resolving the issue
 - `LOCKED` — internal decision to proceed after required verification gates
 
-## Next Gate
+## Next Sequence
 
-**ORDVELA VERIFICATION GATE**: perform domain, social-handle, and trademark screening before public brand lock.
+**ORDVELA BRAND LOCK → BRAND ARCHITECTURE → NAMING SYSTEM → DOMAIN STRATEGY → GITHUB IDENTITY → VISUAL DIRECTION → IMPLEMENTATION**
