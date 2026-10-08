@@ -4,7 +4,19 @@
 
 **V0 implemented. V1 live on Cloudflare BYOK. V2 provider operating layer implemented, selected live access still requires credentials/approval.** No replacement repository, master brand or custom domain.
 
-## Apify Acquisition Bridge v0.4
+## RapidAPI Acquisition Bridge v0.1 · application v0.5
+Server-side adapter, provider-neutral configuration/quota/run/receipt tables, FREE-FIRST recommendation router, derived provider evaluations and existing intelligence integration implemented. Apify retained. Runtime `RAPIDAPI_KEY` is a managed server secret, never a frontend field/value or raw D1 credential. Global secret-reflection input guard and safe logging added.
+
+One candidate staged: ytjar/yt-api, allowlisted host `yt-api.p.rapidapi.com`, GET `/comments?id=VIDEO_ID`, one public video. Pricing/subscription/free quota remain UNKNOWN; response mapping is synthetic-contract tested, not live-verified. No RapidAPI provider request sent; no real RapidAPI evidence or opportunity claimed. Application ID does not prove subscription. All seven other source categories have no reviewed candidate. Details: [RapidAPI implementation / gates](docs/62_RAPIDAPI_ACQUISITION_ARCHITECTURE.md).
+
+Settings → RapidAPI: register metadata → OWNER review terms/schema → verify subscribed plan and hard-limit/no-overage across all billing dimensions → record free quota/period → authorize one bounded Rp0 validation → inspect usable real output → quality approve → enable config + workspace provider. Until then: MOCK / DISCOVERED, disabled. Limits: 1 request, 10 items, 10s/300kB, 30-day UTC scope; shared quota reservations, no external retry/paid fallback. `maxSpend=0` enforced. No guessed health/identity endpoint. A generic Validate button cannot manufacture live authentication.
+
+Local verification: 69 tests (18 RapidAPI), 312–324 API assertions and 56 desktop/mobile browser checks PASS; typecheck/build PASS, npm audit zero vulnerabilities. Full mock produces two evidence records, one demand opportunity and one non-demand signal; cross-provider dedup preserves canonical identity and additional acquisition receipts. Live free validation / Apify comparison remain blocked by missing account-plan proof. Production results recorded in doc 62 after deployment. GitHub push still requires restored write authorization; commits retained locally.
+
+### RapidAPI functional API entry points
+Authenticated and workspace-scoped: `GET /api/rapidapi`, `POST /api/rapidapi/configs`, `POST /api/rapidapi/configs/:id/review|policy|approve|enable|disable`, `POST /api/rapidapi/dry-run`, `GET|POST /api/rapidapi/acquisitions`, `POST .../:id/cancel`, `GET .../:id/evidence`; mutations OWNER only. `GET /api/acquisition-router?capability=youtube-comments&max_spend=0` is recommendation only; `GET /api/provider-evaluations?days=30` derives durable metrics (1–90 days). No secret endpoint. Paid eligibility false; assisted revenue non-additive; currencies never mixed; zero-cost ROI undefined/null.
+
+## Historical Apify Acquisition Bridge v0.4
 Generic async Actor/run/dataset bridge, replaceable workspace Actor Registry, bounded paid confirmation, durable acquisition receipts, cost/usage history and existing demand-to-opportunity integration implemented. `APIFY_API_TOKEN` is a managed server secret, never an input/value in frontend or stored in D1. Latest supplied token identity validated read-only. No paid Actor run performed; no live Actor acquisition/opportunity proof claimed. Actor readiness is separate from application deployment. Details and gates: [Apify architecture / implementation](docs/61_APIFY_ACQUISITION_ARCHITECTURE.md).
 
 Open Settings → Provider Registry → Apify Validate / Enable (workspace access), then Apify Acquisition Bridge → select/inspect Actor → review terms/schema/pricing → explicitly authorize one bounded validation run. Only the YouTube Comments input/output profile has an implementation; the current candidate is resource-incompatible and cannot execute under the fixed bounds. Other slots are metadata-only until reviewed source mappings and tests exist. Never treat Apify as official Meta access or a bypass.
@@ -23,8 +35,8 @@ Local verification: build/typecheck PASS; 37 tests PASS; API 320 recorded assert
 - Health: https://ordvela.pages.dev/api/health
 - Repository: https://github.com/Sparkmind-obp-off/Ordvela — branch `main`.
 - Runtime: Hono + TypeScript + Cloudflare Pages + dedicated `ordvela-production` D1.
-- Migrations `0001_initial.sql`, `0002_provider_registry.sql`, `0003_apify_acquisition.sql` applied locally and remotely (additive Actor metadata/jobs/provenance). Placeholder database UUID removed.
-- Production `CREDENTIAL_MASTER_KEY`, `REGISTRATION_TOKEN` and `APIFY_API_TOKEN` are managed server secrets, never repository variables. Public signup disabled; registration requires operator invitation. Sandbox can allow self-registration through ignored `.dev.vars`.
+- Migrations `0001_initial.sql`, `0002_provider_registry.sql`, `0003_apify_acquisition.sql`, `0004_acquisition_provider_configs.sql` applied locally and remotely (additive Actor metadata/jobs/provenance). Placeholder database UUID removed.
+- Production `CREDENTIAL_MASTER_KEY`, `REGISTRATION_TOKEN` `APIFY_API_TOKEN` and `RAPIDAPI_KEY` are managed server secrets, never repository variables. Public signup disabled; registration requires operator invitation. Sandbox can allow self-registration through ignored `.dev.vars`.
 - Health/auth/demo/golden-path production smoke passed. Compatible deployment rollback and restoration exercised successfully. This is a verified V1 release, not a claim of complete enterprise hardening or proven customer revenue.
 
 ## Implemented capabilities
@@ -109,7 +121,7 @@ All workspace IDs are authorized against server membership. Stable envelopes inc
 
 ## Architecture / storage
 Client → Hono API → core services → adapters / D1 jobs. Runtime uses Web APIs, no local filesystem/Node servers.
-D1: users, sessions, auth_attempts, workspaces, workspace_members, providers (encrypted credentials), sources, signals, opportunities, opportunity_scores, executions, execution_artifacts, distributions, outcomes, usage_events, audit_events, jobs, settings, provider_scaffolds, intelligence_assessments, actor_registry, acquisition_jobs, acquisition_signals. Apify token stays in managed runtime secrets, not database.
+D1: users, sessions, auth_attempts, workspaces, workspace_members, providers (encrypted credentials), sources, signals, opportunities, opportunity_scores, executions, execution_artifacts, distributions, outcomes, usage_events, audit_events, jobs, settings, provider_scaffolds, intelligence_assessments, actor_registry, acquisition_jobs, acquisition_signals, provider_configs, provider_quota_budgets, acquisition_runs, evidence_receipts. Apify/RapidAPI tokens stay in managed runtime secrets, not database.
 Demos serve stored artifacts, not independent customer deployments. Visitor task/form data is session-local unless visitors export their own JSON file; ORDVELA's operational state is durable D1.
 
 ## Verification
@@ -124,7 +136,7 @@ Demos serve stored artifacts, not independent customer deployments. Visitor task
 See `docs/58_PROVIDER_PRODUCTION_VERIFICATION.md`. Reports 54 and earlier phase statuses are historical snapshots, not current deployment truth.
 
 ## Limitations / next action
-Rotate exposed Groq/Meta credentials. Configure the new Groq key in Settings; obtain a Threads USER access token through the official Meta tester/OAuth flow with the required permissions. Never paste production secrets into chat.
+Rotate exposed RapidAPI/Apify/Groq/Meta credentials. Verify a subscribed hard-limited zero-cost RapidAPI plan before live validation; do not assume the shared key or Application ID proves free eligibility. Configure the new Groq key in Settings; obtain a Threads USER access token through the official Meta tester/OAuth flow with the required permissions. Never paste production secrets into chat.
 Deferred: independent scheduled queue consumers, full OAuth callback/token refresh, broader providers, billing, full bespoke customer-app deployment, automatic retraining, email verification/recovery/MFA, automated retention and external monitoring/load testing. Jobs are request-driven, not a permanent queue service. Recorded AI daily token limit is not a strict billing-reservation system.
 
 ## Deploy / rollback

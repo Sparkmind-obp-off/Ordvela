@@ -48,6 +48,11 @@ External aggregators may supply evidence only through normalized adapters and mu
 
 **SOFT-HOLD / ACCESS-RECOVERY OPTIONAL.** Keep existing adapters; attempt controlled recovery when valid credentials and permissions are available; do not repeatedly guess or force access. Production activation requires real validation and real evidence.
 
+## RapidAPI implementation baseline — application 0.5.0 / bridge 0.1
+Canonical upstream architecture `f6b6061` merged without replacing Apify. Added bounded server adapter, shared provider_configs/quota/run/receipt extensions, FREE-FIRST recommendation router, derived provider evaluation, owner-gated lifecycle and Settings UI. Reuses existing jobs/ingest/qualification/rules-v1.0; no duplicate intelligence or revenue ledgers. Managed RAPIDAPI_KEY; Application ID not subscription proof. Global secret input/logging protections. Additive migration 0004 backed up and applied remotely.
+
+69 unit/contract/security/D1 tests PASS (18 RapidAPI), 312–324 API assertions and 56 desktop/mobile browser checks PASS; typecheck/build PASS, zero audit vulnerabilities. One staged YouTube candidate with documented endpoint, UNKNOWN pricing/subscription/quota and synthetic-only output schema. No real RapidAPI request/terms approval or live evidence/opportunity. Free validation and real Apify comparison blocked by unverified account-plan/hard-limit proof. Paid execution entirely blocked; no fallback or autonomous contact. Full production proof and limitations are maintained in doc 62. GitHub write authorization rejected push; local merge/release commits preserved.
+
 ## Apify implementation baseline — 0.4.0
 Upstream `e7294cb` audited; PLANNED Apify manifest promoted to ADAPTER backed by managed runtime secret. Added src/apify.ts, src/acquisition.ts, public/static/acquisition.js and migration 0003; reused existing provider/OWNER/workspace/jobs/signals/scoring/outcomes. No source/root secret copied into D1 or browser. Eight logical registry slots; one isolated executable YouTube-comments input/output profile. Other candidates metadata-only; Actor discovery is not production readiness.
 

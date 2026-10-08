@@ -776,6 +776,41 @@ Do not expose credentials.
 
 Do not expand to multiple live APIs until the first end-to-end path is proven.
 
+## Observed implementation increment — v0.5.0 (2026-10-08)
+
+### Architecture and scope actually implemented
+- Audited existing acquisition contracts and canonical document `f6b6061`; merged it with the preserved Apify release commits. No repository, master brand, custom domain or parallel intelligence model created. Apify runtime/table/Actor gates remain intact.
+- `src/rapidapi.ts`: typed AcquisitionProvider interface, fixed allowlisted GET transport, server-side X-RapidAPI-Key/X-RapidAPI-Host, manual redirect refusal, 10s/300kB/10-record limits, safe non-retriable errors, response quota whitelisting, estimate/capabilities/health, staged YouTube-comments normalization. Key presence yields CONFIGURED_NOT_LIVE_VALIDATED, never fabricated HEALTHY.
+- `src/rapid-acquisition.ts`: provider-neutral config registry, explicit lifecycle, owner-attested zero-cost policy, global quota reservation for the shared runtime key, existing ACQUIRE jobs, durable STARTING/UNKNOWN guard, bounded normalization buffer for crash-safe ingestion, canonical evidence receipts, early cancellation, one initial validation per configuration. At most one network request per job; no external retries, no paid escalation.
+- `src/acquisition-routing.ts`: capability-aware FREE-FIRST recommendations and derived D1 provider evaluations. No automatic execution/fallback. Routing gates cost, reviewed availability, current runtime validation and remaining shared quota; observed qualified-per-request contributes to preference. Quality, coverage/freshness and revenue remain visible human-review factors, not fabricated benchmarks.
+- Reuses `jobs.ingest`, acquisition-demand-gate-v1 and rules-v1.0. RapidAPI and Apify pass the SAME qualification and historical score rules. Canonical YouTube IDs deduplicate across providers; duplicate acquisition receipts keep distinct provenance without rewriting original evidence or score history. Non-demand evidence does not become an opportunity.
+- Migration `0004_acquisition_provider_configs.sql`: additive provider_configs, provider_quota_budgets, acquisition_runs (FK extension of existing jobs), evidence_receipts. No duplicate evidence/opportunity/outcome ledger. ProviderEvaluation is derived from persisted jobs/receipts/outcomes, not a second revenue table.
+- Settings adds candidate registration/review/free-policy configuration, bounded validation/LIVE confirmation, status/quota/cost/provenance history, router and assisted provider comparison. No key input, masked value, suffix or client-side RapidAPI call. CSP connect-src remains self-only.
+- Managed runtime RAPIDAPI_KEY only. Application ID is not an access token, asset ID, endpoint, subscription or quota proof. The policy stores a private one-way credential-binding digest solely to invalidate approvals after key rotation; neither raw key nor that digest is returned by registry APIs. Global API input guard rejects accidental runtime-key inclusion in any JSON/URL, including unrelated generators. Error logs omit URLs/payloads/headers.
+
+### Candidate discovery vs live proof
+Only **ytjar/yt-api**, host **yt-api.p.rapidapi.com**, endpoint **GET /comments?id=VIDEO_ID** is staged. Official marketplace overview documents this endpoint and optional pagination; pagination, downloads, cache-bypass and extra quota features are never used. One public video, not keyword discovery requiring additional requests.
+
+Reference: https://rapidapi.com/ytjar/api/yt-api and https://rapidapi.com/ytjar/api/yt-api/pricing. Published comments mapping is staged from a synthetic `data[] / commentId / contentText / authorText / explicit publishedAt` contract, NOT a verified live provider schema. Relative publication text remains UNKNOWN. Any incompatible response fails, rather than guessing field paths. Provider-derived evidence has verified=false, not official YouTube/Meta verification.
+
+Pricing **UNKNOWN**, subscription **NOT VERIFIED**, remaining free quota **UNKNOWN**, no hard-limit/zero-overage proof supplied. Plain/rendered marketplace pricing pages did not expose verifiable current account-plan quotas. Search snippets are not subscription evidence. Other seven source categories are honestly NO_REVIEWED_CANDIDATE. No guessed hosts or speculative credentialed marketplace/account endpoint called.
+
+RapidAPI's official response-header documentation explicitly says quota remaining zero can start overage charges: https://docs.rapidapi.com/docs/response-headers. A global free-plan hard-limit header is not proof that every endpoint/billing dimension on a particular subscribed API is free. Therefore no live provider request was sent using the supplied key. Do not mark R4/R6/Definition of Done complete from mocks.
+
+### Enforced operating policy
+- Every job maxRequests=1, maxItems=1–10, maxSpend=0 (IDR or USD); 1–10s timeout, no pagination, 30-day maximum UTC window. Explicit timestamps outside the window rejected; absent timestamps explicitly unknown.
+- OWNER reviews terms/source authorization and staged schema, then verifies active subscription, named plan, remaining free quota, period and hard-limit/no-overage for ALL billing dimensions. This is recorded as OWNER_ATTESTED, NOT an automatic marketplace verification or vendor invoice. UNKNOWN/PAID/soft-limit subscriptions remain blocked.
+- Local quota reservoir shared across invite-only workspaces; atomic reservation, conservative cancellation accounting, observed response quotas can only shrink allowance. External use of the same key is not fully visible; provider-side hard-limit proof remains mandatory. Quota depletion → STOP, never automatic upgrade.
+- Two request reservations/workspace/day, five/shared-runtime/day, max two STARTING/UNKNOWN jobs; existing 60 jobs/hour and evidence capacity gates preserved. One initial validation request/configuration; initial empty output does not validate mapping. Terminal malformed output fails and usable partial output is explicit.
+- Routine FREE LIVE requires actual usable bounded validation → human quality approval → config enable + workspace provider enable. Paid routine acquisition is entirely BLOCKED in v0.1; revenue metrics never authorize spending themselves.
+- Shared evidence can assist more than one provider; revenue attribution is NON-ADDITIVE. Currency ledgers remain separate. ROI is null for zero/unknown cost, not infinity or manufactured profit; USD ratio only when a nonzero USD denominator is known. RapidAPI cost zero is based on reviewed hard-limit policy, not an independently verified invoice.
+- Jobs remain request-driven, no cron/queue daemon. UNKNOWN reconciliation, plan-policy refresh and credential-rotation recovery remain manual administrative tasks; no speculative replay endpoint or autonomous broad acquisition.
+
+### Tests / release evidence before production deploy
+Typecheck/build PASS; worker ~187.5 kB uncompressed. **69 tests PASS**, including 18 RapidAPI unit/security/D1/contract tests. Mock full pipeline: two evidence records, one qualified opportunity, one non-demand record; cross-provider canonical duplicate stays one opportunity with additional provenance. Tests cover quota reservation races, copied-workspace quota prevention, crash recovery without second request, timeout UNKNOWN, unsafe hosts/parameters/redirects/errors, key leakage, expired policy and disabled workspace. Existing Apify/provider/core tests preserved. API golden path 324 assertions in one run, 312 final repeat (poll timing), both PASS. Browser 56 checks PASS on desktop/mobile, zero unexpected errors. npm audit zero vulnerabilities.
+
+Private D1 backup taken before migration; seven additive remote commands succeeded. Managed RAPIDAPI_KEY installed through stdin with value suppressed, no runtime secret in repo/D1/client config. Production deployment/results recorded below after verification. GitHub write authorization still rejected the existing main push despite successful setup/fetch; no alternate repository or force push used.
+
 **Success is not “RapidAPI works.”**
 
 Success is:
