@@ -84,7 +84,26 @@ No valid IG asset was invented or App ID used as its substitute. These results d
 
 No successful Meta ingestion is claimed merely because contract fixtures or compilation pass.
 
-## 6. Operator next steps and boundaries
+## 6. Meta operating decision
+
+**Decision: SOFT-HOLD, NOT ABANDONED.**
+
+Meta is technically implemented but not commercially proven in the current workspace because the supplied access path produced Threads AUTH_ERROR, Facebook Page-feed PERMISSION/error 10 on all four tested Pages, and no linked Professional Instagram asset on the checked Page authorization path.
+
+Therefore:
+- Keep all three adapters and regression tests.
+- Do not make Meta a prerequisite for Community & Demand Discovery.
+- Do not repeatedly retry with guessed credentials or undocumented scopes.
+- Perform one controlled recovery cycle when valid Meta app/user/Page/Professional-account access is available.
+- If validation still fails, keep Meta disabled and move engineering effort to lower-friction official sources such as Reddit, YouTube, Discord, RSS/forums and other approved APIs.
+- Revisit Meta when access conditions materially change or a real commercial requirement justifies the effort.
+
+Acceptance gate:
+**VALID AUTH → VALID PERMISSION → REAL EVIDENCE → QUALIFIED DEMAND → OPPORTUNITY**
+
+Only then should Meta be marked production-active.
+
+## 7. Operator next steps and boundaries
 
 1. Rotate the exposed tokens/App Secrets in the official Meta console.
 2. Obtain an actual Threads USER token with threads_basic / threads_keyword_search and verify approval/coverage.
