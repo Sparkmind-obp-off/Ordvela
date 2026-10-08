@@ -188,6 +188,14 @@ A real public signal can become a persisted, explainable opportunity candidate.
 
 ---
 
+## Phase 4 provider expansion gate
+
+Community & Demand Discovery is part of FIND, not a separate product. Provider rollout should proceed by evidence and friction:
+
+**Reddit → YouTube → Discord → RSS/forums → additional official sources → X when economics justify → Meta recovery when access is available → external aggregators when coverage economics justify.**
+
+Meta must not block Phase 4 progress. Each provider is measured by qualified-demand yield and downstream opportunity/revenue, not raw record volume.
+
 # PHASE 5 — OPPORTUNITY WORKSPACE / REVIEW
 
 ### Goal
