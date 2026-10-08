@@ -1,37 +1,14 @@
 # ORDVELA INTELLIGENCE — Source Adapter Specification
 Status: V0 CANONICAL
 
-## Adapter contract
-Each source adapter should provide:
-- source identity
-- availability/status
-- fetch window
-- pagination/cursor
-- stable external ID where available
-- canonical URL
-- timestamp
-- author/account when public
-- raw text
-- metadata
+## Contract
+Each adapter provides source identity, status, fetch window, pagination/cursor, stable external ID where available, canonical URL, timestamp, public author/account, raw text and metadata.
 
-## Initial source families
-- Web search
-- Reddit
-- jobs/freelance demand
-- Threads
-- X
-- Instagram
-- Facebook
+## Initial Sources
+Web search, Reddit, jobs/freelance demand, Threads, X, Instagram and Facebook.
 
-Availability and platform policy vary. Adapters must fail explicitly when a provider cannot legally or technically supply a source.
+## Rules
+Preserve raw evidence. Normalize separately. Deduplicate before opportunity creation. Namespace external IDs by provider. Record capture time. Never claim certainty beyond source evidence.
 
-## Ingestion rules
-- preserve raw evidence
-- normalize text separately
-- deduplicate before opportunity creation
-- namespace external IDs by provider
-- record capture time
-- never claim certainty beyond source evidence
-
-## Provider independence
-No source-specific logic may leak into core scoring or opportunity state.
+## Boundary
+Provider/platform availability and policy vary. Adapters must fail explicitly when a source cannot be supplied safely or technically. Source-specific logic must not leak into core scoring.
