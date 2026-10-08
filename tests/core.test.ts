@@ -29,7 +29,7 @@ test('D1 persistence, deduplication, idempotency, retry bounds, cancellation, st
   const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:'export default {fetch(){return new Response("ok")}}',d1Databases:['DB'],compatibilityDate:'2026-03-01'}));
   try {
     const db=await mf.getD1Database('DB') as any,env={DB:db};
-    for(const migration of ['0001_initial.sql','0002_provider_registry.sql'])await db.exec(readFileSync(new URL('../migrations/'+migration,import.meta.url),'utf8').replace(/\n/g,' '));
+    for(const migration of ['0001_initial.sql','0002_provider_registry.sql','0003_apify_acquisition.sql'])await db.exec(readFileSync(new URL('../migrations/'+migration,import.meta.url),'utf8').replace(/\n/g,' '));
     const time=Date.now();await db.batch([stmt(db,'INSERT INTO users VALUES (?,?,?,?,?)','u','unit@example.test','Unit','test-hash',time),stmt(db,'INSERT INTO workspaces (id,name,created_at) VALUES (?,?,?)','w','Test',time)]);
     const ev={external_id:'fixture:1',url:'https://example.test/public',author:'fixture',published_at:'2026-01-01',raw_text:'Looking for a task tool',provider:'fixture',verified:true,metadata:{fixture:true}};
     const job={workspace_id:'w',actor_id:'u',request_id:'r'};
