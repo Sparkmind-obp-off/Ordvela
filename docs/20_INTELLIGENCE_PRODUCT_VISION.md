@@ -1,38 +1,29 @@
-# Ordvela Intelligence — Product Vision
-
+# ORDVELA INTELLIGENCE — Product Vision
 Status: LOCKED FOR EXECUTION
 Date: 2026-10-08
 
 ## Position
-Ordvela Intelligence is the working name for Ordvela's first demand-to-revenue system under Ordvela Intelligence.
+Ordvela Intelligence is the demand-to-revenue capability within ORDVELA. It is not a separate master brand.
 
-It is not a new master brand. It is not required to remain the permanent public product name.
+## Core Loop
+REAL DEMAND → OPPORTUNITY → SCORE → EXECUTION → DEMO → DISTRIBUTION → DEAL → REVENUE
 
-Permanent architecture:
-REAL DEMAND → OPPORTUNITY → EXECUTION → DEMO → DISTRIBUTION → DEAL → REVENUE
+## Three Technical Layers
+1. Intelligence — discover, verify, classify and score real demand.
+2. Execution — turn a qualified opportunity into a solution, prototype and deployable demo.
+3. Distribution — prepare a relevant final message, require human approval, contact the target and record outcomes.
 
-## Problem
-Most lead-generation systems optimize for volume. Ordvela Intelligence optimizes for evidence of real demand and commercial potential.
-
-## Three Layers
-1. Intelligence — discover, verify, classify, score and rank demand.
-2. Execution — turn qualified opportunities into solution blueprints, prototypes, deployments and demos.
-3. Distribution / Final Message — prepare relevant outreach, keep human approval in the loop, send manually in V0, and capture outcomes.
-
-## Product Principle
-LOCK THE FUNCTION. FLEX THE NAME.
-
-Screen names, filenames and future product names may change. Functional boundaries remain modular.
-
-## Commercial Principle
-Build commercial-ready foundations from day one, but do not overbuild billing, self-service or enterprise features before demand is proven.
-
-V0 must be usable by the owner to generate real revenue. Later versions may expose individual layers as standalone commercial products.
+## Principles
+- Demand before build.
+- Evidence before interpretation.
+- Opportunity before lead volume.
+- Demo before generic pitch.
+- Human approval before external contact.
+- Commercial readiness without premature complexity.
+- Technical naming only until independent product demand proves otherwise.
 
 ## Non-Goals
-Not a generic CRM, generic scraper, chatbot, social monitor, AI agency, automated spam sender, marketplace, or generic website builder.
+Not a generic CRM, scraper, chatbot, social monitor, mass-outreach bot, generic website builder or speculative platform.
 
-## Primary Success Metric
-Qualified opportunities that progress to real conversations and paid work.
-
-Secondary metrics: opportunity precision, demo creation time, demo-to-conversation rate, conversation-to-deal rate, revenue per opportunity, source quality.
+## Success
+The system is successful when real opportunities repeatedly become conversations, deals and revenue.
