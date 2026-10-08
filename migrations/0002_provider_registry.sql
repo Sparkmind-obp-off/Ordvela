@@ -1,0 +1,15 @@
+ALTER TABLE providers ADD COLUMN enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1));
+ALTER TABLE providers ADD COLUMN version TEXT NOT NULL DEFAULT '1.0';
+ALTER TABLE providers ADD COLUMN config TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE providers ADD COLUMN validated_at INTEGER;
+ALTER TABLE providers ADD COLUMN health_checked_at INTEGER;
+ALTER TABLE providers ADD COLUMN health_status TEXT NOT NULL DEFAULT 'UNKNOWN';
+ALTER TABLE providers ADD COLUMN error_code TEXT;
+ALTER TABLE providers ADD COLUMN error_message TEXT;
+UPDATE providers SET status=CASE WHEN status='VALIDATED' THEN 'HEALTHY' ELSE status END;
+CREATE TABLE provider_scaffolds (id TEXT PRIMARY KEY,workspace_id TEXT NOT NULL REFERENCES workspaces(id),provider_id TEXT NOT NULL,definition TEXT NOT NULL,bundle TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'DOCUMENTATION_REQUIRED',checksum TEXT NOT NULL,actor_id TEXT NOT NULL REFERENCES users(id),created_at INTEGER NOT NULL);
+CREATE INDEX idx_scaffolds_workspace ON provider_scaffolds(workspace_id,created_at DESC);
+CREATE TABLE intelligence_assessments (id TEXT PRIMARY KEY,workspace_id TEXT NOT NULL REFERENCES workspaces(id),opportunity_id TEXT NOT NULL REFERENCES opportunities(id),provider TEXT NOT NULL,model TEXT NOT NULL,evidence_hash TEXT NOT NULL,result TEXT NOT NULL,job_id TEXT UNIQUE NOT NULL REFERENCES jobs(id),created_at INTEGER NOT NULL);
+CREATE INDEX idx_assessments_workspace ON intelligence_assessments(workspace_id,opportunity_id,created_at DESC);
+ALTER TABLE usage_events ADD COLUMN input_tokens INTEGER;
+ALTER TABLE usage_events ADD COLUMN output_tokens INTEGER;

@@ -1,7 +1,9 @@
 import { Hono } from 'hono'
 import { App, authenticate, owner, memberships } from './auth'
 import { all,one,stmt } from './db'
-import { Fault,text,choice,confirm,id,now,blueprint,TEMPLATES,outcomeTransition } from './core'
+import { Fault,text,choice,confirm,id,now,blueprint,TEMPLATES,outcomeTransition,digest } from './core'
+import { registryStatus, manifest, generateProvider, requireEnabled } from './providers'
+import { passwordHash } from './auth'
 import { seal } from './adapters'
 import { enqueue,runJobs } from './jobs'
 export const api = new Hono<App>()
@@ -26,6 +28,17 @@ async function job(c:any,type:string,input:any,key:string) {
 }
 api.get('/me',async c=>ok(c,{user:c.get('user'),workspace_id:w(c),role:c.get('role'),workspaces:await memberships(c)}))
 api.get('/workspaces',async c=>ok(c,await memberships(c)))
+api.post('/workspaces/current/archive',async c=>{
+  owner(c);const b=await body(c);confirm(b.confirm)
+  const workspace=await one(c.env.DB,'SELECT name FROM workspaces WHERE id=? AND deleted_at IS NULL',w(c))
+  if(!workspace||b.workspace_name!==workspace.name)throw new Fault('VALIDATION','Ketik nama workspace persis untuk archive')
+  await c.env.DB.batch([
+    stmt(c.env.DB,'UPDATE workspaces SET deleted_at=? WHERE id=? AND deleted_at IS NULL',now(),w(c)),
+    stmt(c.env.DB,'INSERT INTO audit_events (id,workspace_id,actor_id,operation,target_id,request_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)',id(),w(c),c.get('user').id,'workspace.archived',w(c),c.get('requestId'),'soft archive; history retained',now()),
+    stmt(c.env.DB,"UPDATE jobs SET status='CANCELLED',finished_at=? WHERE workspace_id=? AND status='QUEUED'",now(),w(c))
+  ])
+  return ok(c,{archived:true,history_retained:true,public_demos_revoked:true})
+})
 api.get('/members',async c=>ok(c,await all(c.env.DB,'SELECT u.id,u.name,u.email,m.role FROM workspace_members m JOIN users u ON u.id=m.user_id WHERE m.workspace_id=?',w(c))))
 api.post('/members',async c=>{
   owner(c);const b=await body(c);confirm(b.confirm)
@@ -44,10 +57,12 @@ api.delete('/members/:id',async c=>{
   await audit(c,'member.revoked',c.req.param('id'));return ok(c,{revoked:true})
 })
 api.post('/signals/ingest',async c=>{
-  const b=await body(c),provider=choice(b.provider,'provider',['hacker-news','github-issues'])
+  const b=await body(c),provider=choice(b.provider,'provider',['hacker-news','github-issues','threads'])
+  await requireEnabled(c.env,w(c),provider)
   const input={provider,query:b.query?text(b.query,'query',150):undefined,reference:b.reference?text(b.reference,'reference',500):undefined}
   if(!input.query && !input.reference) throw new Fault('VALIDATION','Query atau URL bukti diperlukan')
   if(provider==='github-issues' && !input.reference) throw new Fault('VALIDATION','URL issue diperlukan')
+  if(provider==='threads' && !input.query) throw new Fault('VALIDATION','Threads memerlukan query keyword')
   const total=await one(c.env.DB,'SELECT COUNT(*) n FROM opportunities WHERE workspace_id=?',w(c))
   if(total.n>=500) throw new Fault('RATE_LIMIT','Batas V0: 500 opportunities per workspace',429)
   return job(c,'INGEST',input,text(b.idempotency_key || id(),'idempotency_key',160))
@@ -71,8 +86,26 @@ api.post('/opportunities/:id/decision',async c=>{
   if(!r.meta.changes) throw new Fault('CONFLICT','State berubah; muat ulang',409)
   await audit(c,'opportunity.decision',op.id,{from:op.status,to:state});return ok(c,{id:op.id,status:state})
 })
+api.post('/opportunities/:id/assess',async c=>{
+  const b=await body(c);confirm(b.confirm)
+  const op=await get(c,'opportunities',c.req.param('id')),provider=choice(b.provider||'groq','provider',['groq'])
+  await requireEnabled(c.env,w(c),provider)
+  await audit(c,'intelligence.external-approved',op.id,{provider,scope:'public evidence only'})
+  return job(c,'ASSESS',{opportunity_id:op.id,provider},text(b.idempotency_key||id(),'idempotency_key',160))
+})
+api.get('/opportunities/:id/assessments',async c=>{
+  const op=await get(c,'opportunities',c.req.param('id'))
+  return ok(c,await all(c.env.DB,'SELECT id,provider,model,evidence_hash,result,created_at FROM intelligence_assessments WHERE opportunity_id=? AND workspace_id=? ORDER BY created_at DESC',op.id,w(c)))
+})
+api.post('/account/password',async c=>{
+  const b=await body(c),current=text(b.current_password,'current_password',200),next=text(b.new_password,'new_password',200,12),u=await one(c.env.DB,'SELECT password_hash FROM users WHERE id=?',c.get('user').id)
+  if(await passwordHash(current,u.password_hash.split(':')[0])!==u.password_hash)throw new Fault('AUTHENTICATION','Password saat ini tidak cocok',401)
+  await c.env.DB.batch([stmt(c.env.DB,'UPDATE users SET password_hash=? WHERE id=?',await passwordHash(next),c.get('user').id),stmt(c.env.DB,'DELETE FROM sessions WHERE user_id=?',c.get('user').id)])
+  await audit(c,'account.password-changed',c.get('user').id);return ok(c,{changed:true,login_required:true})
+})
 api.get('/executions',async c=>ok(c,await all(c.env.DB,'SELECT e.*,o.title FROM executions e JOIN opportunities o ON e.opportunity_id=o.id WHERE e.workspace_id=? ORDER BY e.created_at DESC LIMIT 100',w(c))))
 api.post('/executions',async c=>{
+  await requireEnabled(c.env,w(c),'template-build')
   const b=await body(c),op=await get(c,'opportunities',text(b.opportunity_id,'opportunity_id',100))
   if(op.status!=='SELECTED') throw new Fault('CONFLICT','Pilih opportunity sebelum build',409)
   const t=choice(b.template,'template',TEMPLATES),title=text(b.public_title,'public_title',100),summary=text(b.public_summary,'public_summary',600),bp=blueprint(op,t,title,summary),eid=id()
@@ -95,6 +128,7 @@ api.get('/executions/:id',async c=>{
 })
 api.post('/executions/:id/publish',async c=>{
   owner(c);const b=await body(c);confirm(b.confirm)
+  await requireEnabled(c.env,w(c),'cloudflare-pages')
   const e=await get(c,'executions',c.req.param('id'))
   if(!['VALIDATED','DEPLOYED'].includes(e.status)) throw new Fault('CONFLICT','Execution belum tervalidasi',409)
   await audit(c,'deployment.approved',e.id)
@@ -110,6 +144,7 @@ api.post('/executions/:id/unpublish',async c=>{
 })
 api.get('/distributions',async c=>ok(c,await all(c.env.DB,'SELECT d.*,o.title,e.demo_url,s.url AS evidence_url FROM distributions d JOIN opportunities o ON d.opportunity_id=o.id JOIN executions e ON d.execution_id=e.id JOIN signals s ON o.signal_id=s.id WHERE d.workspace_id=? ORDER BY d.created_at DESC LIMIT 100',w(c))))
 api.post('/distributions',async c=>{
+  await requireEnabled(c.env,w(c),'messaging')
   const b=await body(c),e=await get(c,'executions',text(b.execution_id,'execution_id',100))
   if(e.status!=='DEPLOYED') throw new Fault('CONFLICT','Publikasikan demo terlebih dahulu',409)
   const op=await get(c,'opportunities',e.opportunity_id),s=await get(c,'signals',op.signal_id),did=id(),target=text(b.target,'target context',500),demo=new URL(e.demo_url,c.req.url).href
@@ -187,22 +222,70 @@ api.post('/jobs/:id/cancel',async c=>{
   await stmt(c.env.DB,"UPDATE jobs SET status='CANCELLED',finished_at=? WHERE id=? AND workspace_id=? AND status='QUEUED'",now(),j.id,w(c)).run()
   await audit(c,'job.cancelled',j.id);return ok(c,{status:'CANCELLED'})
 })
-api.get('/providers',async c=>ok(c,{encryption_configured:!!c.env.CREDENTIAL_MASTER_KEY,builtin:[{kind:'hacker-news',status:'ENABLED',mode:'public-api'},{kind:'github-issues',status:'ENABLED',mode:'public-api'},{kind:'rules-v1.0',status:'ENABLED',mode:'deterministic'},{kind:'template-build',status:'ENABLED',mode:'intake / calculator / workflow'},{kind:'messaging',status:'MANUAL_HANDOFF'}],configured:await all(c.env.DB,'SELECT id,kind,status,updated_at FROM providers WHERE workspace_id=?',w(c))}))
+api.get('/providers',async c=>{
+  const registry=await registryStatus(c.env,w(c))
+  return ok(c,{encryption_configured:!!c.env.CREDENTIAL_MASTER_KEY,registry,builtin:registry.filter(p=>!p.credential_fields.length&&p.implementation!=='PLANNED').map(p=>({kind:p.id,status:p.status,mode:p.setup})),configured:registry.filter(p=>p.configured&&p.credential_fields.length).map(p=>({id:p.resource_id,kind:p.id,status:p.status,updated_at:p.last_validation}))})
+})
 api.post('/providers',async c=>{
   owner(c);const b=await body(c);confirm(b.confirm)
-  const kind=choice(b.kind,'kind',['openai']),key=text(b.api_key,'api_key',500,10),cipher=await seal(key,c.env.CREDENTIAL_MASTER_KEY || ''),pid=`${w(c)}:${kind}`
-  await stmt(c.env.DB,"INSERT INTO providers (id,workspace_id,kind,status,credential_cipher,updated_at) VALUES (?,?,?,'CONFIGURED',?,?) ON CONFLICT(workspace_id,kind) DO UPDATE SET credential_cipher=excluded.credential_cipher,status='CONFIGURED',updated_at=excluded.updated_at",pid,w(c),kind,cipher,now()).run()
-  await audit(c,'provider.rotated',pid,{kind})
-  return ok(c,{id:pid,status:'CONFIGURED',raw_secret_returned:false})
+  const m=manifest(text(b.kind,'kind',60))
+  if(m.implementation==='PLANNED'||!m.credential_fields.length)throw new Fault('CONFLICT','Provider tidak menerima credential; lihat checklist dokumentasi',409)
+  const supplied=b.credentials||(b.api_key?{api_key:b.api_key}:{})
+  if(!supplied||typeof supplied!=='object'||Array.isArray(supplied)||Object.keys(supplied).some(k=>!m.credential_fields.includes(k)))throw new Fault('VALIDATION','Credential fields tidak sesuai manifest')
+  const values=Object.fromEntries(m.credential_fields.map(f=>[f,text(supplied[f],f,4000,10)])),cipher=await seal(JSON.stringify(values),c.env.CREDENTIAL_MASTER_KEY||''),pid=`${w(c)}:${m.id}`
+  const config=m.id==='groq'?{model:text(b.model||m.default_model,'model',100)}:{}
+  await stmt(c.env.DB,"INSERT INTO providers (id,workspace_id,kind,status,credential_cipher,updated_at,enabled,version,config) VALUES (?,?,?,'CONFIGURED',?,?,0,?,?) ON CONFLICT(workspace_id,kind) DO UPDATE SET credential_cipher=excluded.credential_cipher,status='CONFIGURED',updated_at=excluded.updated_at,enabled=0,config=excluded.config,validated_at=NULL,health_checked_at=NULL,health_status='NOT_CHECKED',error_code=NULL,error_message=NULL",pid,w(c),m.id,cipher,now(),m.version,JSON.stringify(config)).run()
+  await audit(c,'provider.rotated',pid,{kind:m.id});return ok(c,{id:pid,status:'CONFIGURED',enabled:false,raw_secret_returned:false})
 })
-api.post('/providers/:id/validate',async c=>{
-  owner(c);const p=await get(c,'providers',c.req.param('id'));return job(c,'PROVIDER_VALIDATE',{provider_id:p.id},`validate:${p.id}:${p.updated_at}`)
+async function providerResource(c:any,rid:string) {
+  const kind=rid.includes(':')?rid.split(':').pop()!:rid,m=manifest(kind)
+  if(rid!==kind&&rid!==`${w(c)}:${kind}`)throw new Fault('NOT_FOUND','Provider tidak ditemukan',404)
+  if(m.implementation==='PLANNED')throw new Fault('CONFLICT','DOCUMENTATION_REQUIRED: belum ada adapter aktif',409)
+  const pid=`${w(c)}:${kind}`
+  let p=await one(c.env.DB,'SELECT * FROM providers WHERE id=? AND workspace_id=?',pid,w(c))
+  if(!p){const publicBuiltin=!m.credential_fields.length;await stmt(c.env.DB,"INSERT OR IGNORE INTO providers (id,workspace_id,kind,status,updated_at,enabled,version) VALUES (?,?,?,?,?,?,?)",pid,w(c),kind,publicBuiltin?'ENABLED':'NOT_CONFIGURED',now(),publicBuiltin?1:0,m.version).run();p=await get(c,'providers',pid)}
+  return p
+}
+async function providerCheck(c:any,type:string) {
+  owner(c)
+  const count=await one(c.env.DB,'SELECT COUNT(*) n FROM jobs WHERE workspace_id=? AND created_at>?',w(c),now()-3600000)
+  if(count.n>=60)throw new Fault('RATE_LIMIT','Batas 60 operasi/jam tercapai',429,true)
+  const p=await providerResource(c,c.req.param('id')),m=manifest(p.kind)
+  if(m.credential_fields.length&&!p.credential_cipher)throw new Fault('CONFLICT','Required credential belum dikonfigurasi',409)
+  const time=now()
+  const j=await enqueue(c.env,w(c),c.get('user').id,c.get('requestId'),type,{provider_id:p.id,provider_kind:p.kind,revision:p.updated_at},`${type}:${p.id}:${time}`)
+  await stmt(c.env.DB,"UPDATE providers SET status='VALIDATING',health_status='VALIDATING' WHERE id=? AND updated_at=?",p.id,p.updated_at).run()
+  await audit(c,'provider.check-requested',p.id,{type});c.executionCtx.waitUntil(runJobs(c.env,w(c)));return ok(c,j,202)
+}
+api.post('/providers/:id/validate',c=>providerCheck(c,'PROVIDER_VALIDATE'))
+api.post('/providers/:id/health',c=>providerCheck(c,'PROVIDER_HEALTH'))
+api.post('/providers/:id/enable',async c=>{
+  owner(c);const b=await body(c);confirm(b.confirm);const p=await providerResource(c,c.req.param('id'))
+  if(p.health_status!=='HEALTHY'||!p.validated_at||p.validated_at<now()-86400000)throw new Fault('CONFLICT','Validate/health dalam 24 jam terakhir diperlukan sebelum enable',409)
+  const r=await stmt(c.env.DB,"UPDATE providers SET enabled=1,status='ENABLED',updated_at=? WHERE id=? AND workspace_id=? AND health_status='HEALTHY' AND updated_at=?",now(),p.id,w(c),p.updated_at).run()
+  if(!r.meta.changes)throw new Fault('CONFLICT','Configuration berubah; muat ulang',409)
+  await audit(c,'provider.enabled',p.id);return ok(c,{status:'ENABLED',enabled:true})
+})
+api.post('/providers/:id/disable',async c=>{
+  owner(c);confirm((await body(c)).confirm);const p=await providerResource(c,c.req.param('id'))
+  await stmt(c.env.DB,"UPDATE providers SET enabled=0,status='DISABLED',updated_at=? WHERE id=? AND workspace_id=?",now(),p.id,w(c)).run()
+  await audit(c,'provider.disabled',p.id);return ok(c,{status:'DISABLED',enabled:false})
 })
 api.delete('/providers/:id',async c=>{
-  owner(c);confirm((await body(c)).confirm);const p=await get(c,'providers',c.req.param('id'))
-  await stmt(c.env.DB,"UPDATE providers SET credential_cipher=NULL,status='DISABLED',updated_at=? WHERE id=? AND workspace_id=?",now(),p.id,w(c)).run()
-  await audit(c,'provider.revoked',p.id);return ok(c,{status:'DISABLED'})
+  owner(c);confirm((await body(c)).confirm);const p=await providerResource(c,c.req.param('id'))
+  await stmt(c.env.DB,"UPDATE providers SET credential_cipher=NULL,enabled=0,status='NOT_CONFIGURED',validated_at=NULL,health_checked_at=NULL,health_status='NOT_CHECKED',error_code=NULL,error_message=NULL,updated_at=? WHERE id=? AND workspace_id=?",now(),p.id,w(c)).run()
+  await audit(c,'provider.revoked',p.id);return ok(c,{status:'NOT_CONFIGURED',enabled:false})
 })
+api.post('/provider-generator',async c=>{
+  owner(c);const b=await body(c)
+  if(/gsk_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|EAA[A-Za-z0-9]{40,}/.test(JSON.stringify(b)))throw new Fault('VALIDATION','Generator hanya menerima definisi; jangan masukkan nilai secret')
+  const generated=await generateProvider(b),gid=id()
+  await stmt(c.env.DB,'INSERT INTO provider_scaffolds (id,workspace_id,provider_id,definition,bundle,status,checksum,actor_id,created_at) VALUES (?,?,?,?,?,?,?,?,?)',gid,w(c),generated.definition.provider_id,JSON.stringify(generated.definition),JSON.stringify(generated.files),generated.status,generated.checksum,c.get('user').id,now()).run()
+  await audit(c,'provider.scaffold-generated',gid,{provider:generated.definition.provider_id,status:generated.status})
+  return ok(c,{id:gid,...generated},201)
+})
+api.get('/provider-generator',async c=>ok(c,await all(c.env.DB,'SELECT id,provider_id,status,checksum,created_at FROM provider_scaffolds WHERE workspace_id=? ORDER BY created_at DESC LIMIT 50',w(c))))
+api.get('/provider-generator/:id',async c=>ok(c,await get(c,'provider_scaffolds',c.req.param('id'))))
 api.get('/usage',async c=>ok(c,await all(c.env.DB,'SELECT provider,operation,SUM(units) units,COUNT(*) events FROM usage_events WHERE workspace_id=? GROUP BY provider,operation',w(c))))
 api.get('/audit',async c=>ok(c,await all(c.env.DB,'SELECT a.*,u.name AS actor_name FROM audit_events a JOIN users u ON u.id=a.actor_id WHERE a.workspace_id=? ORDER BY a.created_at DESC LIMIT 100',w(c))))
 api.get('/settings',async c=>ok(c,{environment:c.env.ENVIRONMENT || 'unknown',job_processing:'request-driven durable queue (poll /api/jobs)',signup_enabled:c.env.SIGNUP_ENABLED==='true',flags:await all(c.env.DB,'SELECT key,value FROM settings WHERE workspace_id=?',w(c))}))

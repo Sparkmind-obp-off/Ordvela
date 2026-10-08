@@ -3,6 +3,6 @@
   "name": "ordvela",
   "compatibility_date": "2026-03-01",
   "pages_build_output_dir": "./dist",
-  "d1_databases": [{ "binding": "DB", "database_name": "ordvela-production", "database_id": "00000000-0000-0000-0000-000000000001", "migrations_dir": "migrations" }],
-  "vars": { "ENVIRONMENT": "development", "SIGNUP_ENABLED": "true" }
+  "d1_databases": [{ "binding": "DB", "database_name": "ordvela-production", "database_id": "c661ebcc-bcde-41ce-b35b-9e97909e6e2f", "migrations_dir": "migrations" }],
+  "vars": { "ENVIRONMENT": "production", "SIGNUP_ENABLED": "false" }
 }

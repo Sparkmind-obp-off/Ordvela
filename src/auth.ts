@@ -24,9 +24,10 @@ async function session(c:any,userId:string) {
   setCookie(c,'ordvela_session',token,{httpOnly:true,secure:new URL(c.req.url).protocol==='https:',sameSite:'Strict',path:'/',maxAge:7*86400})
 }
 auth.post('/register',async c=>{
-  if(c.env.SIGNUP_ENABLED!=='true') throw new Fault('AUTHORIZATION','Registrasi dinonaktifkan oleh operator',403)
   await rate(c)
-  const b=await c.req.json(),email=text(b.email,'email',254).toLowerCase(),name=text(b.name,'name',100),pass=text(b.password,'password',200,12),workspace=text(b.workspace_name,'workspace',100)
+  const b=await c.req.json()
+  if(c.env.SIGNUP_ENABLED!=='true' && (!c.env.REGISTRATION_TOKEN || typeof b.registration_token!=='string' || !equal(await digest(b.registration_token),await digest(c.env.REGISTRATION_TOKEN)))) throw new Fault('AUTHORIZATION','Registrasi memerlukan kode undangan operator',403)
+  const email=text(b.email,'email',254).toLowerCase(),name=text(b.name,'name',100),pass=text(b.password,'password',200,12),workspace=text(b.workspace_name,'workspace',100)
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Fault('VALIDATION','Email tidak valid')
   if(await one(c.env.DB,'SELECT id FROM users WHERE email=?',email)) throw new Fault('CONFLICT','Email sudah terdaftar',409)
   const uid=id(),wid=id()
