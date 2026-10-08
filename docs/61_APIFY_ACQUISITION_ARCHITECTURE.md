@@ -140,3 +140,30 @@ Signals deduplicate deterministically by namespaced source ID and normalized con
 Build/typecheck PASS; 51 unit/contract/D1/security/API tests PASS, including 14 Apify tests. Mock acquisition produced two signals, one qualified opportunity, repeat acquisition zero additional signals/opportunities and four run-to-evidence receipts. API regression 312 assertions PASS; browser 48 checks PASS, zero unexpected errors at desktop/mobile. npm audit zero vulnerabilities. Entire Git history scan: 181 blobs, zero supplied/runtime secret matches. Production validation is recorded below after release; no mock result is labelled live acquisition success.
 
 Official API references reviewed: https://docs.apify.com/api/v2/actors-runs-post, https://docs.apify.com/api/v2/actor-get, https://docs.apify.com/api/v2/actor-build-get, https://docs.apify.com/api/v2/store-get, https://docs.apify.com/api/client/js/reference/interface/ActorStartOptions.
+
+## Observed production release — 2026-10-08
+Existing BYOK project `ordvela`, main branch: v0.4.0 deployed at https://466eca84.ordvela.pages.dev; stable https://ordvela.pages.dev. Health HTTP 200, production D1 ready. Migration 0003 applied after private backup. Managed APIFY_API_TOKEN installed by stdin, identity validated through deployed ORDVELA provider job (GET users/me only). Operator provider HEALTHY/ENABLED; this is not Actor approval or paid authorization.
+
+Production golden path: 77 checks PASS, isolated QA archived/demo revoked; contact and revenue were explicitly simulated. Authenticated desktop/mobile browser: 14 checks PASS, zero page errors. Apify-specific setup: 107 checks PASS including configured boolean, protected API 401, eight disabled/unreviewed Actor bindings, enable-before-output rejection 409, unapproved acquisition rejection 400, empty acquisition history, no runtime token in JSON/static assets. Python urllib was edge-rejected 403 before any configuration; runtime-compatible Node fetch subsequently passed. No false credential-error claim.
+
+### Actual selected candidate matrix (metadata only, not live Actor proof)
+All eight candidates have successful inspected builds, LIMITED_PERMISSIONS and current PAY_PER_EVENT metadata. No terms review or live run validation recorded; enabled=false for every Actor. Only the YouTube profile has code; other seven have no executable source mapping.
+
+| Slot | Actor / ID | Build / version | Actual blocking state |
+|---|---|---|---|
+| threads-search | igview-owner/threads-search-scraper / FP43CZrdHtiSNn4SY | tbQYnDAgP02XGaoO5 / 1.0.44 | DOCUMENTATION_REQUIRED; mapping and terms review |
+| reddit-search | harshmaur/reddit-scraper / 9sHOY9RzPYGjmTHo8 | 4MIKUcw9QqJMRK6U5 / 0.0.562 | BLOCKED_COMPLIANCE; README restriction-bypass concern; not executed |
+| youtube-comments | streamers/youtube-comments-scraper / p7UMdpQnjKmmpR21D | e16tFLK92fNrRfopR / 0.0.249 | DOCUMENTATION_REQUIRED; minimum memory 1024 MB exceeds fixed 256 MB bound |
+| tiktok-comments | clockworks/tiktok-comments-scraper / BDec00yAmCm1QbMEI | qg9lyBpEEpYb8rYhM / 0.0.470 | DOCUMENTATION_REQUIRED; mapping and terms review |
+| instagram-posts | apify/instagram-scraper / shu8hvrXbJbY3Eb9W | 45JL4cocj8B6ffS3W / 0.0.803 | DOCUMENTATION_REQUIRED; mapping and terms review |
+| facebook-posts | apify/facebook-posts-scraper / KoJrdxJCTtpon81KY | Uyubh9C5dhJOknuq7 / 0.0.399 | DOCUMENTATION_REQUIRED; mapping and terms review |
+| x-search | apidojo/tweet-scraper / 61RPP7dywgiy0JPD0 | t1drVAq8CJCdmQfoM / 0.0.1543 | DOCUMENTATION_REQUIRED; mapping and terms review |
+| google-search | apify/google-search-scraper / nFJndFXA5zjCTuudP | j1KHroHbaMQXFmDBG / 0.0.462 | DOCUMENTATION_REQUIRED; mapping and terms review |
+
+Observed pricing is mutable and tier-dependent, not a billing quote. Examples: Threads FREE start/item USD .02/.02; Reddit init .02, result up to .002 plus optional analyzed/label events; YouTube result .0003–.002 and minimum allowed charge ceiling .50; TikTok result .00015–.00125; Instagram result .0005–.0027; Facebook start .001, post .0008–.005 plus filter events; X item .0004; Google page .0012–.0045 plus optional events and minimum ceiling .50. Full current event/tier metadata is visible in protected registry. No Google AI, lead, email-verification or other optional events executed. Platform fees may be additional.
+
+The real YouTube memory mismatch surfaced in production metadata review despite passing compatible synthetic fixture tests. The gate correctly refused readiness; no paid POST occurred. Runtime metadata/UI now expose minimum/configured memory and validation_blockers, with 1024-MB regression coverage. Bounds were not relaxed. A compatible replacement Actor/profile, or separately approved reviewed resource-policy change, is required before a live validation run.
+
+Paid runs: **0**. Live Apify evidence/opportunities: **0/0**. Terms approvals: **0**. Actors enabled: **0**. External contact/post/reply/DM: **NO**. Meta remains SOFT-HOLD; Apify is never labelled official Meta ingestion. Supplied token appeared in chat: rotate it in Apify and replace the managed secret through a secure channel before ongoing operations.
+
+Git release commits were saved locally (`be1b3dd`, `bebb905`, `41b197d`); push to the existing GitHub remote was rejected despite successful setup tooling. No alternate repository or deployment architecture created. Restore GitHub authorization before pushing outstanding main commits. This blocker does not invalidate the observed BYOK production deployment.

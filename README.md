@@ -7,9 +7,9 @@
 ## Apify Acquisition Bridge v0.4
 Generic async Actor/run/dataset bridge, replaceable workspace Actor Registry, bounded paid confirmation, durable acquisition receipts, cost/usage history and existing demand-to-opportunity integration implemented. `APIFY_API_TOKEN` is a managed server secret, never an input/value in frontend or stored in D1. Latest supplied token identity validated read-only. No paid Actor run performed; no live Actor acquisition/opportunity proof claimed. Actor readiness is separate from application deployment. Details and gates: [Apify architecture / implementation](docs/61_APIFY_ACQUISITION_ARCHITECTURE.md).
 
-Open Settings → Provider Registry → Apify Validate / Enable (workspace access), then Apify Acquisition Bridge → select/inspect Actor → review terms/schema/pricing → explicitly authorize one bounded validation run. Only the YouTube Comments profile is executable; other slots are metadata-only until reviewed source mappings and tests exist. Never treat Apify as official Meta access or a bypass.
+Open Settings → Provider Registry → Apify Validate / Enable (workspace access), then Apify Acquisition Bridge → select/inspect Actor → review terms/schema/pricing → explicitly authorize one bounded validation run. Only the YouTube Comments input/output profile has an implementation; the current candidate is resource-incompatible and cannot execute under the fixed bounds. Other slots are metadata-only until reviewed source mappings and tests exist. Never treat Apify as official Meta access or a bypass.
 
-Local checks: 51 tests, 312 API assertions, 48 browser checks, build/typecheck PASS. Production release verification pending final smoke; deployment section and doc 61 record actual results.
+Local checks: 51 tests, 312 API assertions, 48 browser checks, build/typecheck PASS. v0.4.0 is deployed on existing Cloudflare BYOK; production golden path 77 checks, authenticated browser 14 checks and Apify read-only setup 107 checks PASS. Eight candidate bindings saved disabled/unreviewed. The selected YouTube build requires 1024 MB, exceeding the fixed 256 MB bound: DOCUMENTATION_REQUIRED, not ready to run. Reddit candidate: BLOCKED_COMPLIANCE. Zero paid runs, live Apify evidence or opportunities. GitHub push is blocked by rejected authentication; commits are saved locally. Detailed Actor matrix: doc 61.
 
 ## Historical FIN Meta v0.3 — actual state
 Bounded official read adapters, encrypted Facebook/Instagram/Threads configuration, provider-specific FIN modes and evidence review are implemented. New Meta posts must pass `meta-demand-gate-v1` before opportunity creation; non-demand signals remain inspectable. `rules-v1.0` and historical scores are unchanged. HN/GitHub public-source regression repaired.
@@ -24,7 +24,7 @@ Local verification: build/typecheck PASS; 37 tests PASS; API 320 recorded assert
 - Repository: https://github.com/Sparkmind-obp-off/Ordvela — branch `main`.
 - Runtime: Hono + TypeScript + Cloudflare Pages + dedicated `ordvela-production` D1.
 - Migrations `0001_initial.sql`, `0002_provider_registry.sql`, `0003_apify_acquisition.sql` applied locally and remotely (additive Actor metadata/jobs/provenance). Placeholder database UUID removed.
-- Production `CREDENTIAL_MASTER_KEY` and `REGISTRATION_TOKEN` are managed server secrets, never repository variables. Public signup disabled; registration requires operator invitation. Sandbox can allow self-registration through ignored `.dev.vars`.
+- Production `CREDENTIAL_MASTER_KEY`, `REGISTRATION_TOKEN` and `APIFY_API_TOKEN` are managed server secrets, never repository variables. Public signup disabled; registration requires operator invitation. Sandbox can allow self-registration through ignored `.dev.vars`.
 - Health/auth/demo/golden-path production smoke passed. Compatible deployment rollback and restoration exercised successfully. This is a verified V1 release, not a claim of complete enterprise hardening or proven customer revenue.
 
 ## Implemented capabilities
