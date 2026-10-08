@@ -1,5 +1,7 @@
 # ORDV​​ELA — RapidAPI Acquisition Bridge Architecture v0.1
 
+**Push recovery (2026-10-08):** GitHub write authorization recovered. Existing main advanced from f6b6061 to d192cb3 with all outstanding Apify/RapidAPI release commits, verified by successful git push. Earlier push-blocker paragraphs below are historical attempts, not current status. Live Rp0 validation still requires verified subscription/hard-limit proof; recovery does not authorize provider execution.
+
 **Status:** IMPLEMENTATION-READY  
 **Policy:** FREE-FIRST / REVENUE-GATED  
 **Existing provider:** Apify remains active  
