@@ -192,9 +192,11 @@ A real public signal can become a persisted, explainable opportunity candidate.
 
 Community & Demand Discovery is part of FIND, not a separate product. Provider rollout should proceed by evidence and friction:
 
-**Reddit → YouTube → Discord → RSS/forums → additional official sources → X when economics justify → Meta recovery when access is available → external aggregators when coverage economics justify.**
+**Direct official sources + Apify acquisition bridge → normalized evidence → intelligence core.**
 
-Meta must not block Phase 4 progress. Each provider is measured by qualified-demand yield and downstream opportunity/revenue, not raw record volume.
+Apify is now a first-class acquisition bridge for permitted public/licensed acquisition where direct APIs are unavailable, insufficient or uneconomical. Actor selection, permissions, schemas, pricing and bounded execution are governed by docs/61_APIFY_ACQUISITION_ARCHITECTURE.md and docs/56_PROVIDER_INTEGRATION_BLUEPRINT.md.
+
+Meta must not block Phase 4 progress. Each acquisition route is measured by qualified-demand yield and downstream opportunity/revenue, not raw record volume. Apify must never become the intelligence system of record or an irreversible dependency.
 
 # PHASE 5 — OPPORTUNITY WORKSPACE / REVIEW
 
