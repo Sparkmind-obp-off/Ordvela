@@ -7,9 +7,9 @@
 ## FIN Meta v0.3 — actual state
 Bounded official read adapters, encrypted Facebook/Instagram/Threads configuration, provider-specific FIN modes and evidence review are implemented. New Meta posts must pass `meta-demand-gate-v1` before opportunity creation; non-demand signals remain inspectable. `rules-v1.0` and historical scores are unchanged. HN/GitHub public-source regression repaired.
 
-Latest supplied tokens were actually tested: three Facebook identity successes, all Threads token checks rejected with 190, four authorized Page feeds rejected with permission error 10, no linked Professional IG asset returned. Temporary encrypted local QA credentials revoked. Real Meta evidence/opportunities/scores: **0/0/0**. Production Meta remains unconfigured/not enabled pending passing validation and explicit Page/workspace selection. Do not mistake fixture tests or app deployment for live Meta coverage. Full proof and operator steps: [report 59](docs/59_FIN_META_IMPLEMENTATION.md).
+Latest supplied tokens were actually tested: three Facebook identity successes, all Threads token checks rejected with 190, four authorized Page feeds rejected with permission error 10, no linked Professional IG asset returned. Temporary encrypted local/isolated production QA credentials revoked; production QA archived. Real Meta evidence/opportunities/scores: **0/0/0**. Production Meta remains unconfigured/not enabled pending passing validation and explicit Page/workspace selection. Do not mistake fixture tests or app deployment for live Meta coverage. Full proof and operator steps: [report 59](docs/59_FIN_META_IMPLEMENTATION.md).
 
-Local verification: build/typecheck PASS; 37 tests PASS; API 320 recorded assertions; browser 42 checks. Production v0.3 deployment verification is recorded in report 58 after release.
+Local verification: build/typecheck PASS; 37 tests PASS; API 320 recorded assertions; browser 42 checks. v0.3 is LIVE on existing Cloudflare BYOK: production health DB ready; smoke 77 checks and authenticated operator browser 14 checks PASS. Supplied-token production QA confirmed the same blocked Meta states; see report 58.
 
 ## URLs / release
 - Production: https://ordvela.pages.dev
@@ -96,12 +96,12 @@ Demos serve stored artifacts, not independent customer deployments. Visitor task
 ## Verification
 - Build and TypeScript: PASS; worker approximately 116 kB uncompressed.
 - `npm test`: 37/37 PASS, including provider/generator/normalization/credential/AI-grounding contracts and durable lifecycle.
-- `npm run test:e2e`: 320 assertions PASS in recorded run (poll timing can increase assertion count).
+- `npm run test:e2e`: 320 assertions PASS (final repeat 312, both successful; polling-dependent count) in recorded run (poll timing can increase assertion count).
 - `npm run test:browser`: 42 checks PASS; desktop 1440×1000 / mobile 390×844.
 - `npm run test:production`: 77 checks PASS using isolated archived QA workspace and secure `TEST_REGISTRATION_TOKEN` environment.
 - `node tests/production-browser.mjs`: 14 authenticated read-only production checks PASS; secure operator credentials supplied only through environment.
 - Live Groq assessment: PASS, one exact grounded quote, 264 input / 159 output tokens in recorded successful call. Supplied key was not installed into production.
-- `npm audit`: zero vulnerabilities. Production rollback + restore: PASS, no schema downgrade or history deletion.
+- `npm audit`: zero vulnerabilities. Historical v0.2 production rollback + restore: PASS, no schema downgrade or history deletion.
 See `docs/58_PROVIDER_PRODUCTION_VERIFICATION.md`. Reports 54 and earlier phase statuses are historical snapshots, not current deployment truth.
 
 ## Limitations / next action

@@ -3,7 +3,7 @@
 Date: 2026-10-08
 Runtime increment: 0.3.0
 Status: IMPLEMENTED / REGRESSION VERIFIED / LIVE META ACCESS BLOCKED
-Release deployment: pending final BYOK verification; report 58 records the final result.
+Release deployment: LIVE on https://ordvela.pages.dev, BYOK Pages, runtime code commit `5ec9203`; verified immutable deployment https://245cd6a8.ordvela.pages.dev. Report 58 records production checks.
 
 ## 1. Audit and implementation
 
@@ -64,10 +64,10 @@ The latest uploaded material was privately parsed; only labels and safe statuses
 | Authorized Facebook /me/accounts | Four Pages visible |
 | Derived authorized Page token, bounded feed read for each Page | HTTP 400, Meta error 10 for all four; PERMISSION blocked |
 | Linked instagram_business_account from authorized Pages | Zero linked accounts found; IG User ID not available on this selected auth surface |
-| ORDVELA local encrypted configure + validation job using supplied token | Threads AUTH_ERROR, enabled false |
-| ORDVELA local encrypted configure + validation job using each derived Page token | Facebook BLOCKED_PERMISSION, enabled false |
-| Credential cleanup | All temporary QA provider credentials revoked after checks |
-| Production operator credential import/enable | Not performed: no selected Page/production workspace and no passing Meta validation |
+| ORDVELA local and isolated production QA encrypted configure + validation job using supplied token | Threads AUTH_ERROR, enabled false |
+| ORDVELA local and isolated production QA encrypted configure + validation job using each derived Page token | Facebook BLOCKED_PERMISSION, enabled false |
+| Credential cleanup | All temporary local/production QA provider credentials revoked after checks; production QA workspace archived |
+| Production operator credential import/enable | Not performed: no operator-selected Page/workspace and no passing Meta validation; isolated production QA validation only |
 | Real Meta evidence / opportunities / scores created | 0 / 0 / 0 |
 
 No valid IG asset was invented or App ID used as its substitute. These results do not establish that no Instagram account exists elsewhere, only that none was returned through the authorized Page linkage checked. Since Facebook identity succeeds but feed fails, this is not reported as an expired-token diagnosis. Exact missing app/asset permission must be resolved in Meta's console, not guessed.
@@ -78,7 +78,7 @@ No valid IG asset was invented or App ID used as its substitute. These results d
 - Unit/contracts/D1/API fixtures: 37/37 PASS.
 - Extended local real-source API golden path: recorded 320 assertions PASS.
 - Desktop/mobile browser, generator, provider credential UI and FIN modes: 42 checks PASS, no unexpected page errors; 1440×1000 / 390×844.
-- Full production golden path and authenticated browser: final results recorded in report 58 after deployment.
+- Full production golden path: 77 checks PASS; authenticated read-only production operator browser: 14 checks PASS; production health HTTP 200, v0.3.0, database ready. Separate production Meta QA reproduced one AUTH_ERROR and four BLOCKED_PERMISSION results, all disabled; credentials revoked and QA workspace archived.
 - Synthetic Meta API proof: two preserved records, one demand-qualified opportunity and one non-demand signal; repeat ingestion adds zero signals. This is labelled contract evidence, not live Meta ingestion success.
 - Credentials, untrusted URLs, invalid limits, unpublished posts, invalid timestamps/IDs, permission/auth/rate/network failures, redirect rejection, rotation/revocation and public-source regression covered.
 
@@ -92,7 +92,7 @@ No successful Meta ingestion is claimed merely because contract fixtures or comp
 4. Link/authorize an Instagram Professional account on the implemented Facebook Login surface and obtain its actual IG User ID, or separately commission an Instagram Login adapter with its own reviewed auth contract.
 5. Configure → Validate → Enable only on successful checks → run limit 1–5 → inspect original evidence/gate reasoning → make a human decision.
 
-External contact = NO. Posting/reply/DM = NO. Secret committed = NO (scan before release). No scraping, cookie/CAPTCHA bypass, private-account discovery, arbitrary credentialed URL fetch, automatic outreach or fabricated revenue. Execution/Daytona expansion is outside this increment.
+External contact = NO. Posting/reply/DM = NO. Secret committed = NO (tracked files and dist scanned before release). No scraping, cookie/CAPTCHA bypass, private-account discovery, arbitrary credentialed URL fetch, automatic outreach or fabricated revenue. Execution/Daytona expansion is outside this increment.
 
 Official references reviewed:
 - https://developers.facebook.com/documentation/threads/keyword-search

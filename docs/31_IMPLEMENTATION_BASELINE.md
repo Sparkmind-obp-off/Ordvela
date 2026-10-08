@@ -19,10 +19,10 @@ Initial baseline `19c4341` was documentation only. Runtime `09702d8` delivered V
 - Tests: core/contracts/D1/Meta API fixtures, real-source API loop, desktop/mobile UI and isolated production regression scripts.
 
 ## Observed local verification
-Build/typecheck PASS. 37 unit/contracts/D1/API tests PASS. Recorded extended API run: 320 assertions PASS. Desktop/mobile: 42 checks PASS, zero unexpected page errors. Historical v0.2 production smoke/browser/rollback remain recorded separately in report 58; final v0.3 deployment checks are appended there, not inferred from local tests.
+Build/typecheck PASS. 37 unit/contracts/D1/API tests PASS. Recorded extended API run: 320 assertions PASS. Desktop/mobile: 42 checks PASS, zero unexpected page errors. v0.3 production smoke: 77 checks PASS; authenticated read-only operator browser: 14 PASS; health HTTP 200, database ready, runtime v0.3.0. Deployed code `5ec9203` on existing BYOK Pages project. Historical v0.2 rollback remains separately labelled in report 58; no new rollback is claimed.
 
 ## Actual Meta credential proof
-Latest supplied token candidates were inspected privately and tested read-only: three Facebook identity successes; all three rejected by Threads with 190; four authorized Pages found, all Page-feed reads rejected with error 10; zero linked Professional IG assets returned. ORDVELA encrypted local validation reproduced AUTH_ERROR / BLOCKED_PERMISSION, enabled false, and QA credentials were revoked. Real Meta evidence/opportunities/scores: 0/0/0. No production provider credentials installed or enabled without passing validation and explicit Page/workspace selection.
+Latest supplied token candidates were inspected privately and tested read-only: three Facebook identity successes; all three rejected by Threads with 190; four authorized Pages found, all Page-feed reads rejected with error 10; zero linked Professional IG assets returned. ORDVELA encrypted local and isolated production QA validation reproduced AUTH_ERROR / BLOCKED_PERMISSION, enabled false; QA credentials revoked and production QA workspace archived. Real Meta evidence/opportunities/scores: 0/0/0. No operator production provider credentials installed/enabled; production Meta checks were isolated QA only.
 
 ## Production and data boundary
 Existing https://ordvela.pages.dev, dedicated D1, two migrations, managed encryption/invitation secrets, public signup disabled. HN historic evidence proves mechanics, not current buyer intent. QA contact/revenue are explicit simulations; no external send. Production smoke workspaces are archived and demos revoked. FIN qualification is a conservative hypothesis gate, not AI-confirmed demand, and leaves legacy HN/GitHub behavior and historical scores unchanged.
@@ -32,4 +32,4 @@ Meta live discovery blocked by the observed token/permission/asset conditions. G
 
 ## Identity and non-negotiables
 ORDVELA only master brand; Ordvela Intelligence capability. LOCK THE FUNCTION. FLEX THE NAME.
-External contact = NO. Posting/reply/DM = NO. Secret committed = NO (release scan required).
+External contact = NO. Posting/reply/DM = NO. Secret committed = NO (tracked files/dist scan PASS).
