@@ -20,9 +20,20 @@ app.use('/api/*',async(c,next)=>{
   await next()
 })
 app.use('/api/*',bodyLimit({maxSize:32000,onError:c=>c.json({error:{code:'VALIDATION',message:'Payload terlalu besar',retryable:false},request_id:c.get('requestId')},413)}))
+app.use('/api/*',async(c,next)=>{
+  // Reject accidental runtime-secret input globally, including unrelated generators,
+  // queries and path parameters. Error logs never include request URLs or payloads.
+  const secret=c.env.RAPIDAPI_KEY
+  if(secret){
+    let url='';try{url=decodeURIComponent(c.req.url)}catch{throw new Fault('VALIDATION','Invalid URL encoding')}
+    if(url.includes(secret))throw new Fault('VALIDATION','Runtime secret bukan parameter API')
+    if(!['GET','HEAD','OPTIONS'].includes(c.req.method)&&JSON.stringify(await c.req.json()).includes(secret))throw new Fault('VALIDATION','Runtime secret bukan payload API')
+  }
+  await next()
+})
 app.get('/api/health',async c=>{
-  try { if(!c.env.DB) throw new Error('DB missing');await one(c.env.DB,'SELECT COUNT(*) n FROM workspaces');return c.json({data:{status:'ok',database:'ready',environment:c.env.ENVIRONMENT || 'unknown',jobs:'request-driven',version:'0.4.0'},request_id:c.get('requestId')}) }
-  catch {return c.json({data:{status:'blocked',database:'not-configured-or-migrated',version:'0.4.0'},request_id:c.get('requestId')},503)}
+  try { if(!c.env.DB) throw new Error('DB missing');await one(c.env.DB,'SELECT COUNT(*) n FROM workspaces');return c.json({data:{status:'ok',database:'ready',environment:c.env.ENVIRONMENT || 'unknown',jobs:'request-driven',version:'0.5.0'},request_id:c.get('requestId')}) }
+  catch {return c.json({data:{status:'blocked',database:'not-configured-or-migrated',version:'0.5.0'},request_id:c.get('requestId')},503)}
 })
 app.route('/api/auth',auth)
 app.route('/api',api)
@@ -40,7 +51,7 @@ app.notFound(c=>c.json({error:{code:'NOT_FOUND',message:'Route tidak ditemukan',
 app.onError((e,c)=>{
   const fault=e instanceof Fault?e:e instanceof SyntaxError?new Fault('VALIDATION','JSON tidak valid'):new Fault('INTERNAL','Operasi gagal; periksa health atau request ID',500)
   // Deliberately do not log payloads, raw evidence, keys, or underlying provider errors.
-  console.error(JSON.stringify({request_id:c.get('requestId'),code:fault.code,operation:c.req.method+' '+new URL(c.req.url).pathname}))
+  console.error(JSON.stringify({request_id:c.get('requestId'),code:fault.code,operation:c.req.method,surface:c.req.path.startsWith('/api/')?'api':'web'}))
   return c.json({error:{code:fault.code,message:fault.message,retryable:fault.retryable},request_id:c.get('requestId')},fault.status as any)
 })
 export default app

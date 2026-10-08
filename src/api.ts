@@ -1,3 +1,7 @@
+import { rapidRegistry, configureRapid, reviewRapid, configureFreePolicy, rapidLifecycle, createRapidAcquisition, rapidHistory, cancelRapid } from './rapid-acquisition'
+import { acquisitionRoute, providerEvaluations } from './acquisition-routing'
+import { rapidBounds, zeroCostGate } from './rapidapi'
+import { rapidConfig } from './rapid-acquisition'
 import { actorRegistry, configureActor, actorResource, reviewActor, acquisitionHistory, createAcquisition, cancelAcquisition } from './acquisition'
 import { ApifyAdapter, apifySecret } from './apify'
 import { Hono } from 'hono'
@@ -35,7 +39,8 @@ api.post('/workspaces/current/archive',async c=>{
   const workspace=await one(c.env.DB,'SELECT name FROM workspaces WHERE id=? AND deleted_at IS NULL',w(c))
   if(!workspace||b.workspace_name!==workspace.name)throw new Fault('VALIDATION','Ketik nama workspace persis untuk archive')
   const activeAcquisition=await one(c.env.DB,"SELECT COUNT(*) n FROM acquisition_jobs WHERE workspace_id=? AND phase IN ('PREPARED','STARTING','RUNNING','RETRIEVING','UNKNOWN')",w(c))
-  if(activeAcquisition.n)throw new Fault('CONFLICT','Cancel/resolve external acquisition sebelum archive; unknown spend tetap perlu audit',409)
+  const activeRapid=await one(c.env.DB,"SELECT COUNT(*) n FROM acquisition_runs WHERE workspace_id=? AND phase IN ('PREPARED','STARTING','UNKNOWN','RECEIVED')",w(c))
+  if(activeAcquisition.n||activeRapid.n)throw new Fault('CONFLICT','Cancel/resolve external acquisition sebelum archive; unknown spend tetap perlu audit',409)
   await c.env.DB.batch([
     stmt(c.env.DB,'UPDATE workspaces SET deleted_at=? WHERE id=? AND deleted_at IS NULL',now(),w(c)),
     stmt(c.env.DB,'INSERT INTO audit_events (id,workspace_id,actor_id,operation,target_id,request_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)',id(),w(c),c.get('user').id,'workspace.archived',w(c),c.get('requestId'),'soft archive; history retained',now()),
@@ -227,7 +232,7 @@ api.post('/jobs/:id/retry',async c=>{
 })
 api.post('/jobs/:id/cancel',async c=>{
   const j=await get(c,'jobs',c.req.param('id'))
-  if(j.type==='ACQUIRE'){owner(c);confirm((await body(c)).confirm);const result=await cancelAcquisition(c.env,w(c),j.id);await audit(c,'acquisition.cancel-requested',j.id);c.executionCtx.waitUntil(runJobs(c.env,w(c)));return ok(c,result)}
+  if(j.type==='ACQUIRE'){owner(c);confirm((await body(c)).confirm);const result=JSON.parse(j.input).provider==='rapidapi'?await cancelRapid(c.env,w(c),j.id):await cancelAcquisition(c.env,w(c),j.id);await audit(c,'acquisition.cancel-requested',j.id);c.executionCtx.waitUntil(runJobs(c.env,w(c)));return ok(c,result)}
   if(j.status!=='QUEUED') throw new Fault('CONFLICT','Hanya job QUEUED yang dapat dibatalkan dengan aman',409)
   await stmt(c.env.DB,"UPDATE jobs SET status='CANCELLED',finished_at=? WHERE id=? AND workspace_id=? AND status='QUEUED'",now(),j.id,w(c)).run()
   await audit(c,'job.cancelled',j.id);return ok(c,{status:'CANCELLED'})
@@ -253,7 +258,7 @@ async function providerResource(c:any,rid:string) {
   if(m.implementation==='PLANNED')throw new Fault('CONFLICT','DOCUMENTATION_REQUIRED: belum ada adapter aktif',409)
   const pid=`${w(c)}:${kind}`
   let p=await one(c.env.DB,'SELECT * FROM providers WHERE id=? AND workspace_id=?',pid,w(c))
-  if(!p){const publicBuiltin=!m.credential_fields.length&&kind!=='apify';await stmt(c.env.DB,"INSERT OR IGNORE INTO providers (id,workspace_id,kind,status,updated_at,enabled,version) VALUES (?,?,?,?,?,?,?)",pid,w(c),kind,publicBuiltin?'ENABLED':kind==='apify'&&c.env.APIFY_API_TOKEN?'CONFIGURED':'NOT_CONFIGURED',now(),publicBuiltin?1:0,m.version).run();p=await get(c,'providers',pid)}
+  if(!p){const publicBuiltin=!m.credential_fields.length&&m.auth_type!=='RUNTIME_SECRET';await stmt(c.env.DB,"INSERT OR IGNORE INTO providers (id,workspace_id,kind,status,updated_at,enabled,version) VALUES (?,?,?,?,?,?,?)",pid,w(c),kind,publicBuiltin?'ENABLED':(kind==='apify'?c.env.APIFY_API_TOKEN:kind==='rapidapi'?c.env.RAPIDAPI_KEY:false)?'CONFIGURED':'NOT_CONFIGURED',now(),publicBuiltin?1:0,m.version).run();p=await get(c,'providers',pid)}
   return p
 }
 async function providerCheck(c:any,type:string) {
@@ -310,6 +315,19 @@ api.get('/acquisitions',async c=>{c.executionCtx.waitUntil(runJobs(c.env,w(c)));
 api.post('/acquisitions',async c=>{owner(c);await requireEnabled(c.env,w(c),'apify');const r=await createAcquisition(c.env,w(c),c.get('user').id,c.get('requestId'),await body(c));c.executionCtx.waitUntil(runJobs(c.env,w(c)));return ok(c,r,202)})
 api.post('/acquisitions/:id/cancel',async c=>{owner(c);confirm((await body(c)).confirm);const r=await cancelAcquisition(c.env,w(c),c.req.param('id'));await audit(c,'acquisition.cancel-requested',c.req.param('id'));c.executionCtx.waitUntil(runJobs(c.env,w(c)));return ok(c,r)})
 api.get('/acquisitions/:id/evidence',async c=>{const a=await one(c.env.DB,'SELECT job_id FROM acquisition_jobs WHERE job_id=? AND workspace_id=?',c.req.param('id'),w(c));if(!a)throw new Fault('NOT_FOUND','Acquisition tidak ditemukan',404);return ok(c,await all(c.env.DB,'SELECT s.*,x.row_index FROM acquisition_signals x JOIN signals s ON s.id=x.signal_id WHERE x.job_id=? AND s.workspace_id=? ORDER BY x.row_index',a.job_id,w(c)))})
+async function rapidBody(c:any){owner(c);const b=await body(c);if(!b||typeof b!=='object'||Array.isArray(b)||(c.env.RAPIDAPI_KEY&&JSON.stringify(b).includes(c.env.RAPIDAPI_KEY)))throw new Fault('VALIDATION','RapidAPI secret/invalid body bukan parameter konfigurasi');return b}
+api.get('/rapidapi',async c=>ok(c,await rapidRegistry(c.env,w(c))))
+api.post('/rapidapi/dry-run',async c=>{const b=await rapidBody(c),bounds=rapidBounds(b),r=await rapidConfig(c.env,w(c),text(b.config_id,'config_id',200));return ok(c,{mode:'DRY_RUN',network_requests:0,credential_validated:false,estimate:zeroCostGate(JSON.parse(r.policy),bounds),bounds,status:r.status,terms_reviewed:!!r.reviewed_at,paid_fallback:false})})
+api.post('/rapidapi/configs',async c=>{const b=await rapidBody(c),r=await configureRapid(c.env,w(c),c.get('user').id,b);await audit(c,'rapidapi.candidate-selected',r.id);return ok(c,{id:r.id,status:r.status,revision:r.revision,enabled:!!r.enabled},201)})
+api.post('/rapidapi/configs/:id/review',async c=>{const b=await rapidBody(c);if(Object.keys(b).some(k=>!['confirm','terms_authorized','schema_reviewed','revision'].includes(k)))throw new Fault('VALIDATION','Review fields invalid');const r=await reviewRapid(c.env,w(c),c.get('user').id,c.req.param('id'),b);await audit(c,'rapidapi.terms-schema-reviewed',c.req.param('id'));return ok(c,r)})
+api.post('/rapidapi/configs/:id/policy',async c=>{const b=await rapidBody(c);if(Object.keys(b).some(k=>!['confirm','revision','policy'].includes(k)))throw new Fault('VALIDATION','Policy fields invalid');const r=await configureFreePolicy(c.env,w(c),c.req.param('id'),b);await audit(c,'rapidapi.zero-cost-policy-attested',c.req.param('id'));return ok(c,r)})
+api.post('/rapidapi/configs/:id/:operation',async c=>{const b=await rapidBody(c);if(Object.keys(b).some(k=>!['confirm','revision','quality_acceptable'].includes(k)))throw new Fault('VALIDATION','Lifecycle fields invalid');const op=choice(c.req.param('operation'),'operation',['approve','enable','disable']),r=await rapidLifecycle(c.env,w(c),c.req.param('id'),op,b);await audit(c,'rapidapi.'+op,c.req.param('id'));return ok(c,r)})
+api.get('/rapidapi/acquisitions',async c=>{c.executionCtx.waitUntil(runJobs(c.env,w(c)));return ok(c,await rapidHistory(c.env,w(c)))})
+api.post('/rapidapi/acquisitions',async c=>{const b=await rapidBody(c);await providerResource(c,'rapidapi');const r=await createRapidAcquisition(c.env,w(c),c.get('user').id,c.get('requestId'),b);c.executionCtx.waitUntil(runJobs(c.env,w(c)));return ok(c,r,202)})
+api.post('/rapidapi/acquisitions/:id/cancel',async c=>{const b=await rapidBody(c);confirm(b.confirm);const r=await cancelRapid(c.env,w(c),c.req.param('id'));await audit(c,'rapidapi.cancelled',c.req.param('id'));return ok(c,r)})
+api.get('/rapidapi/acquisitions/:id/evidence',async c=>{const r=await one(c.env.DB,'SELECT job_id FROM acquisition_runs WHERE job_id=? AND workspace_id=?',c.req.param('id'),w(c));if(!r)throw new Fault('NOT_FOUND','Run tidak ditemukan',404);return ok(c,await all(c.env.DB,'SELECT s.*,x.provenance AS acquisition_provenance FROM evidence_receipts x JOIN signals s ON s.id=x.signal_id WHERE x.job_id=? AND s.workspace_id=?',r.job_id,w(c)))})
+api.get('/acquisition-router',async c=>ok(c,await acquisitionRoute(c.env,w(c),{capability:c.req.query('capability')||'youtube-comments',max_spend:Number(c.req.query('max_spend')||0)})))
+api.get('/provider-evaluations',async c=>ok(c,await providerEvaluations(c.env,w(c),Number(c.req.query('days')||30))))
 api.get('/provider-generator',async c=>ok(c,await all(c.env.DB,'SELECT id,provider_id,status,checksum,created_at FROM provider_scaffolds WHERE workspace_id=? ORDER BY created_at DESC LIMIT 50',w(c))))
 api.get('/provider-generator/:id',async c=>ok(c,await get(c,'provider_scaffolds',c.req.param('id'))))
 api.get('/usage',async c=>ok(c,await all(c.env.DB,'SELECT provider,operation,SUM(units) units,COUNT(*) events FROM usage_events WHERE workspace_id=? GROUP BY provider,operation',w(c))))
