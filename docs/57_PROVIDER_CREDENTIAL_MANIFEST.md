@@ -1,5 +1,10 @@
 # ORDVELA — Provider Credential Manifest
 
+## Current runtime mapping — 2026-10-08
+Production managed secrets: CREDENTIAL_MASTER_KEY and REGISTRATION_TOKEN. No secret values are committed. Public registration is disabled; invitations are secret-gated. Optional provider credentials are accepted only through Settings/authorized API and encrypted inside the workspace D1 provider record. The OPENAI_API_KEY/GROQ_API_KEY and broader discovery names below are architectural placeholders, not environment variables consumed automatically by this release.
+
+Actual provider fields: Groq api_key + optional public model; OpenAI api_key (models validation only); Threads access_token (USER token, not app secret). Threads scopes: threads_basic + threads_keyword_search; public search requires Meta permission approval. See official https://developers.facebook.com/documentation/threads/get-started and https://developers.facebook.com/documentation/threads/keyword-search. App IDs/secrets were not used as user access tokens. Exposed credentials must be rotated, then entered in the secure provider form, never chat. Full OAuth callback/refresh is not yet implemented, so no redirect URI is advertised as working.
+
 ## Credential Handling Rule
 
 Never ask the operator to paste secrets into GitHub, source files, documentation, chat or a public prompt.

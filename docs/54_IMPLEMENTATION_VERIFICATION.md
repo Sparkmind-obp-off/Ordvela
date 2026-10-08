@@ -1,6 +1,8 @@
 # ORDVELA — V0 Implementation Verification
 Date: 2026-10-08
-Release status: SANDBOX VERIFIED / PRODUCTION BLOCKED
+Release status: HISTORICAL V0 SNAPSHOT — superseded by 58_PROVIDER_PRODUCTION_VERIFICATION.md
+
+The quota blocker below records the initial release only. Current production is live at https://ordvela.pages.dev; do not treat this historical snapshot as current deployment status.
 
 ## IMPLEMENTED
 Real Hono API and responsive six-screen cockpit; D1 persisted workspace/auth/domain model; OWNER/OPERATOR/VIEWER; source/evidence preservation; HN and GitHub public-source adapters; deduplication; rule-based demand classification and versioned score breakdown; review/selection; private blueprint and three constrained functional HTML prototypes; static artifact validation and checksums; OWNER-approved demo publication and revocation; evidence-linked message preparation; explicit human approval before manual contact recording; append-only outcomes, minor-unit revenue, learning joins, attributed operation usage and audit.

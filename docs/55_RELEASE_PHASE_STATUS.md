@@ -1,44 +1,36 @@
 # ORDVELA — Release Phase Status
-
 Date: 2026-10-08
+Current verification: `58_PROVIDER_PRODUCTION_VERIFICATION.md`
 
-## Current Position
+## V0 — FIND / BUILD / SHOW / SELL
+Status: IMPLEMENTED / VERIFIED
+Existing runtime preserved: sources/evidence, normalization/deduplication, rule classification/scoring, selection, constrained blueprint/build/validation, safe demo, message preparation, human approval, manual contact recording, outcomes/QA revenue, feedback, durable jobs, audit and responsive cockpit.
 
-ORDVELA is beyond the core V0 build phases. The remaining critical path is **V1/V2 productionization**, not another architecture rewrite.
+## V1 — Production enablement
+Status: LIVE / SMOKE VERIFIED
+- Dedicated ORDVELA D1 provisioned; placeholder UUID removed.
+- Both migrations applied remotely; fresh encryption/invitation roots configured as managed secrets.
+- Cloudflare BYOK Pages project `ordvela`, stable URL https://ordvela.pages.dev.
+- Public signup disabled; invitation-gated onboarding and private operator account. Password changes revoke sessions.
+- Production health/auth/source/demo/approval/outcome/learning smoke: 77 checks PASS using isolated QA workspace, archived afterward.
+- Authenticated operator browser: 14 checks PASS desktop/mobile.
+- Actual compatible production rollback and restoration: PASS; no schema downgrade/data deletion.
+- Original quota blocker resolved; no unrelated database altered.
 
-### V0 — FIND / BUILD / SHOW / SELL proof
+This verifies a bounded V1 release, not complete enterprise hardening or actual customer revenue.
 
-Status: **SANDBOX VERIFIED**
+## V2 — Provider operating layer
+Status: IMPLEMENTED CORE / PARTIAL LIVE COVERAGE
+Registry, lifecycle checks/enabling/disabling, secure credential rotation/revocation, health/errors/timestamps, normalized source contracts, provider usage and non-executing scaffold generator implemented and tested.
 
-Implemented and tested: public demand ingestion from HN/GitHub; evidence preservation and deduplication; deterministic demand classification; explainable/versioned scoring; opportunity review; constrained blueprint/prototype generation; validation and local demo publication; evidence-linked message preparation; human approval before contact recording; outcomes, simulated revenue and feedback persistence; D1 jobs, retries, idempotency, audit and usage attribution; responsive cockpit; automated tests and browser checks.
+Groq model validation + grounded assessment tested live. Exposed supplied key not installed; production activation requires rotated key via Settings.
 
-### V1 — Production Enablement
+Threads official keyword adapter and fixtures implemented. Live access blocked by missing user access token and unverified Meta access permissions. App IDs/secrets alone are insufficient.
 
-Status: **INCOMPLETE / CURRENT BLOCKER**
+OpenAI models validation exists; no live supplied key. Reddit/X/Meta broader sources/Web/Search/Jobs/Email/WhatsApp/independent Workers jobs remain honest DOCUMENTATION_REQUIRED entries.
 
-Required:
-1. Provision dedicated ORDVELA production D1.
-2. Replace placeholder D1 UUID in wrangler.jsonc.
-3. Apply remote migrations.
-4. Set production runtime variables.
-5. Set CREDENTIAL_MASTER_KEY as a server-side secret.
-6. Create/reuse Cloudflare Pages project ordvela.
-7. Deploy reviewed main.
-8. Run production health, auth, source, demo and rollback smoke checks.
-9. Verify provider configuration status.
+## Remaining
+Full OAuth callback/refresh, independent scheduled consumers, broader providers, billing, recovery/email verification/MFA, external monitoring/load tests and automatic retraining remain deferred. Jobs remain request-driven. QA simulated contact/revenue are not real commercial proof.
 
-Current blocker recorded in verification: Cloudflare D1 account quota.
-
-### V2 — Provider Expansion + Commercial Loop
-
-Status: **ARCHITECTED, NOT FULLY IMPLEMENTED**
-
-V2 expands provider adapters for Web/Search, Reddit, X, Threads, Facebook/Instagram where officially supported, jobs/freelance sources, LLM providers, deployment providers and messaging providers.
-
-V2 also adds provider health UI, credential setup wizard, provider generator, capability metadata, rate-limit/quota handling, normalized source contracts, usage/cost attribution, optional scheduled ingestion and commercial hooks only after value is proven.
-
-## Release Boundary
-
-**V0 proven in sandbox → V1 makes it production-operational → V2 expands provider coverage and commercial capability.**
-
-CREDENTIAL_MASTER_KEY is owned by the production runtime/operator. Never commit it to GitHub or paste it into chat.
+## Smallest next action
+Operator changes temporary password, rotates exposed Groq/Meta credentials, configures fresh Groq key securely, validates and enables. Threads user-token/access setup is a separate official Meta step.

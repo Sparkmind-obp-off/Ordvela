@@ -1,5 +1,8 @@
 # ORDVELA — External Provider Integration Blueprint
 
+## Implementation status — 2026-10-08
+IMPLEMENTED: registry, lifecycle/health/enable/disable/rotation/revocation, provider checklist UI, normalized contracts, attributed usage, non-executing scaffold generator and selected HN/GitHub/Groq/Threads adapters. Generator currently accepts technical identity/family, official docs URL, auth and credential field names; endpoint/pagination/webhook implementations are NOT autonomously inferred. Its six files retain DOCUMENTATION_REQUIRED until reviewed integration work. Broader generator input/output below is target architecture, not a claim that vendor implementations are generated or verified. Groq live assessment passed but production activation requires rotated key. Threads user token/permissions absent. Full verified matrix: 58_PROVIDER_PRODUCTION_VERIFICATION.md.
+
 ## Purpose
 
 Define one canonical integration contract before real API credentials are supplied.

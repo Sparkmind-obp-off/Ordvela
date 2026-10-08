@@ -1,5 +1,8 @@
 # ORDVELA INTELLIGENCE — Provider and BYOK Architecture
-Status: V0 CANONICAL
+Status: CANONICAL ARCHITECTURE / IMPLEMENTED SELECTED PROVIDERS
+
+## Current implementation (2026-10-08)
+Registry and non-executing generator: src/providers.ts. Lifecycle and encrypted credential endpoints: src/api.ts. Durable health/assessment jobs: src/jobs.ts. HN/GitHub preserved; Groq grounded evidence assessment and documented Threads keyword adapter implemented. Missing vendor access remains NOT_CONFIGURED; broader providers remain DOCUMENTATION_REQUIRED. No arbitrary generated code is registered. Production encryption root is configured; exposed keys were not installed. Exact verified coverage: 58_PROVIDER_PRODUCTION_VERIFICATION.md.
 
 ## Principle
 Core logic must not depend on one vendor.
