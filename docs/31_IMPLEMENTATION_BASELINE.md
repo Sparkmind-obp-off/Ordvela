@@ -1,33 +1,35 @@
 # ORDVELA INTELLIGENCE — Implementation Baseline
-Status: V0 IMPLEMENTED / V1 PRODUCTION VERIFIED / V2 SELECTED PROVIDERS
+Status: V0 IMPLEMENTED / V1 PRODUCTION VERIFIED / V2 PROVIDERS + FIN META
 Date: 2026-10-08
-Current verification: `58_PROVIDER_PRODUCTION_VERIFICATION.md`
+Runtime increment: 0.3.0. Current FIN proof: `59_FIN_META_IMPLEMENTATION.md`; deployment results: `58_PROVIDER_PRODUCTION_VERIFICATION.md`.
 
 ## Repository audit
-Initial baseline `19c4341` was documentation only. Runtime `09702d8` delivered V0. Subsequent remote documents through `7f2c85f` were audited and preserved before provider-layer implementation. Working V0 auth, domain, scoring, prototypes, approval and outcomes were extended, not replaced.
+Initial baseline `19c4341` was documentation only. Runtime `09702d8` delivered V0; `211a945` recorded the verified v0.2 provider release. Upstream Meta additions through `d0aa82e` were audited and preserved. The HN/GitHub unconditional-credential regression and incomplete Meta bounds/UI/qualification were fixed, not deployed unchanged. No repository/brand/domain/architecture replacement.
 
 ## Current structure
-- `src/index.ts`: Hono Pages worker, health, secure headers and isolated public artifact route.
-- `src/auth.ts`: PBKDF2 auth, hashed sessions, workspace membership, production invitation gate.
-- `src/api.ts`: workspace-scoped revenue-loop API, provider lifecycle/generator, consented assessments, password/session revocation and soft workspace archive.
-- `src/core.ts`: explainable deterministic intelligence, versioned scoring, bounded templates, artifact validation and commercial transitions.
-- `src/adapters.ts`: HN/GitHub, normalized evidence, documented Threads keyword API, Groq grounded assessment, OpenAI models validation, safe provider errors and AES-GCM credential boundary.
-- `src/providers.ts`: central capability/credential/health registry and non-executing scaffold generator.
-- `src/jobs.ts`: durable idempotent jobs, claims, retries, timeout/lease recovery and lifecycle observations.
-- `public/static/`: six-screen responsive cockpit, evidence/AI review, provider checklist, health/lifecycle controls and generator inspection.
-- Two D1 migrations: core domain plus provider lifecycle/scaffolds/assessments/token usage.
-- Tests: unit/contracts/D1, extended API golden path, browser/generator/mobile states, isolated production golden path and authenticated read-only production browser.
+- `src/index.ts`: Hono Pages worker, health v0.3.0, secure headers, isolated approved public artifacts.
+- `src/auth.ts`: PBKDF2, hashed sessions, roles/workspace membership and invitation-gated production registration.
+- `src/api.ts`: scoped revenue-loop, provider/generator/assessment APIs; strict Meta modes/limits/credential schema; password/session revocation and archive.
+- `src/core.ts`: unchanged `rules-v1.0` scoring/templates; separate `meta-demand-gate-v1` request/context qualification with evidence quotes.
+- `src/adapters.ts`: HN/GitHub; Threads v1.0; Facebook published Page feed and Instagram Facebook Login Professional media v26.0; exact official permalink checks; header-only tokens; rejected redirects; safe typed errors; Groq/OpenAI and AES-GCM.
+- `src/providers.ts`: 18 registry entries, eleven adapters/built-ins, seven honest planned entries; lifecycle/scaffold generator; decrypt only credentialed sources.
+- `src/jobs.ts`: durable claims/retries/idempotency and extraction results; all accepted Meta signals retained, only qualified Meta demand creates an opportunity.
+- `public/static/`: six screens; provider-specific FIN controls, unavailable-provider options, latest evidence review/reasons, safe empty-password configuration + numeric asset fields, job counts.
+- Existing two D1 migrations unchanged; no score/history rewrite or schema downgrade.
+- Tests: core/contracts/D1/Meta API fixtures, real-source API loop, desktop/mobile UI and isolated production regression scripts.
 
-## Verified
-Build/typecheck PASS; 27 unit/contract/database tests PASS; recorded API run 245 assertions PASS; browser 30 checks PASS; production smoke 77 checks PASS; production operator browser 14 checks PASS. Audit 0 vulnerabilities. Real Groq model validation and grounded assessment PASS. Production rollback and restoration PASS, no schema downgrade or commercial-history deletion.
+## Observed local verification
+Build/typecheck PASS. 37 unit/contracts/D1/API tests PASS. Recorded extended API run: 320 assertions PASS. Desktop/mobile: 42 checks PASS, zero unexpected page errors. Historical v0.2 production smoke/browser/rollback remain recorded separately in report 58; final v0.3 deployment checks are appended there, not inferred from local tests.
 
-Historical real HN source is used for deterministic golden-path proof; actual buying availability is UNKNOWN. QA contact/reply/revenue are explicitly simulations. The production QA workspace was archived and its demo revoked. Five genuine public HN candidates were ingested into the operator workspace, none selected/contacted, no real revenue recorded.
+## Actual Meta credential proof
+Latest supplied token candidates were inspected privately and tested read-only: three Facebook identity successes; all three rejected by Threads with 190; four authorized Pages found, all Page-feed reads rejected with error 10; zero linked Professional IG assets returned. ORDVELA encrypted local validation reproduced AUTH_ERROR / BLOCKED_PERMISSION, enabled false, and QA credentials were revoked. Real Meta evidence/opportunities/scores: 0/0/0. No production provider credentials installed or enabled without passing validation and explicit Page/workspace selection.
 
-## Production state
-https://ordvela.pages.dev — dedicated `ordvela-production` D1, both migrations applied, fresh managed encryption/invitation secrets, public signup disabled. Original D1-quota blocker was resolved after the owner supplied a slot. No unrelated database was deleted or reused. A private onboarding access file is kept outside git; operator changes the temporary password in Settings.
+## Production and data boundary
+Existing https://ordvela.pages.dev, dedicated D1, two migrations, managed encryption/invitation secrets, public signup disabled. HN historic evidence proves mechanics, not current buyer intent. QA contact/revenue are explicit simulations; no external send. Production smoke workspaces are archived and demos revoked. FIN qualification is a conservative hypothesis gate, not AI-confirmed demand, and leaves legacy HN/GitHub behavior and historical scores unchanged.
 
 ## Partial / blocked
-Groq production enablement requires a newly rotated key; exposed supplied credential was tested but not installed. Threads adapter is contract-tested but missing an authorized USER access token/permission proof. OpenAI live validation not proven. Jobs are request-driven; prototypes are bounded; full OAuth/refresh, account recovery/MFA, broader connectors, billing, monitoring/load testing and automatic retraining remain incomplete/deferred.
+Meta live discovery blocked by the observed token/permission/asset conditions. Groq production requires a rotated securely configured key; OpenAI generation remains unimplemented. Request-driven queue only. Full OAuth/refresh, automatic asset selection, clustering, manual rejected-signal promotion, unrestricted customer coding, account recovery/MFA, billing, broad connectors, load testing and automatic retraining remain deferred. No new D1 slot required.
 
-## Identity
-ORDVELA only master brand; Ordvela Intelligence capability. Existing repository preserved. No extra custom domain, brand, parallel application architecture or customer repository created.
+## Identity and non-negotiables
+ORDVELA only master brand; Ordvela Intelligence capability. LOCK THE FUNCTION. FLEX THE NAME.
+External contact = NO. Posting/reply/DM = NO. Secret committed = NO (release scan required).

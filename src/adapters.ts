@@ -7,11 +7,16 @@ export interface MessagingAdapter { mode: 'MANUAL_HANDOFF' }
 export interface LLMAdapter { validate(key: string): Promise<void> }
 export async function providerJSON(url: string, init: RequestInit = {}, timeout = 10000) {
   try {
-    const r = await fetch(url,{...init,signal:AbortSignal.timeout(timeout)})
+    const r = await fetch(url,{...init,redirect:'manual',signal:AbortSignal.timeout(timeout)})
+    if(r.status>=300&&r.status<400)throw new Fault('PROVIDER','Redirect provider ditolak; endpoint harus resmi dan langsung',502)
     const d=await r.json().catch(()=>null) as any
     if(!r.ok || d?.error) {
-      const auth=r.status===401||r.status===403||d?.error?.code===190
-      throw new Fault(auth?'AUTHENTICATION':r.status===429?'RATE_LIMIT':'PROVIDER',`Provider menolak request (HTTP ${r.status}); periksa credential, scope atau status layanan`,502,!auth&&(r.status===429||r.status>=500))
+      const metaCode=Number(d?.error?.code)
+      const auth=r.status===401||metaCode===190||metaCode===102
+      const permission=!auth&&(r.status===403||[10,200,294].includes(metaCode))
+      const rate=r.status===429||[4,17,32,613,80001].includes(metaCode)
+      const code=auth?'AUTHENTICATION':permission?'PERMISSION':rate?'RATE_LIMIT':'PROVIDER'
+      throw new Fault(code,`Provider menolak request (HTTP ${r.status}); periksa credential, scope atau akses asset`,502,!auth&&!permission&&(rate||r.status>=500))
     }
     if(!d || typeof d!=='object') throw new Fault('PROVIDER','Respons provider bukan JSON yang valid',502)
     return d
@@ -56,48 +61,68 @@ export async function normalizeEvidence(e:Evidence):Promise<NormalizedEvidence> 
   if(url.protocol!=='https:'||url.username||url.password)throw new Fault('PROVIDER','Canonical evidence URL tidak aman',502)
   return {...e,source:e.provider,externalId:e.external_id,canonicalUrl:e.url,authorRef:e.author,publishedAt:e.published_at,retrievedAt:new Date().toISOString(),title:normalize(e.raw_text.split('\n')[0]).slice(0,200),body:normalize(e.raw_text),language:'unknown',engagement:{},evidence:{text:e.raw_text,provenance:e.url},rawReference:e.url,contentHash:await digest(normalize(e.raw_text).toLowerCase())}
 }
+export const META_GRAPH_VERSION='v26.0'
+export function collectionLimit(value:unknown=10):number {
+  const n=typeof value==='number'?value:typeof value==='string'&&/^\d+$/.test(value)?Number(value):NaN
+  if(!Number.isInteger(n)||n<1||n>25)throw new Fault('VALIDATION','limit harus integer 1–25')
+  return n
+}
+export function assetId(value:unknown,field:string):string {
+  const v=text(value,field,32)
+  if(!/^\d{5,32}$/.test(v))throw new Fault('VALIDATION',`${field} harus ID asset numerik, bukan App ID/URL`)
+  return v
+}
+function metaURL(value:unknown,provider:string):string {
+  let u:URL
+  try{u=new URL(String(value))}catch{throw new Fault('PROVIDER','Permalink Meta tidak valid',502)}
+  const hosts=provider==='facebook'?['facebook.com','www.facebook.com','m.facebook.com']:provider==='instagram'?['instagram.com','www.instagram.com']:['threads.com','www.threads.com','threads.net','www.threads.net']
+  if(u.protocol!=='https:'||u.username||u.password||u.port||!hosts.includes(u.hostname)||u.pathname==='/')throw new Fault('PROVIDER','Permalink bukan sumber resmi Meta',502)
+  if(provider==='instagram'&&!/^\/(p|reel|tv)\/[A-Za-z0-9_-]+\/?$/.test(u.pathname))throw new Fault('PROVIDER','Permalink media Instagram tidak valid',502)
+  if(provider==='threads'&&!/^\/@[^/]+\/post\/[A-Za-z0-9_-]+\/?$/.test(u.pathname))throw new Fault('PROVIDER','Permalink post Threads tidak valid',502)
+  const allowed=provider==='facebook'?['id','story_fbid','fbid']:[]
+  const keys:string[]=[];u.searchParams.forEach((_,k)=>keys.push(k))
+  for(const k of keys)if(!allowed.includes(k))u.searchParams.delete(k)
+  u.hash=''
+  return u.toString()
+}
+function metaTime(value:unknown):string {
+  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}/.test(value)||!Number.isFinite(Date.parse(value)))throw new Fault('PROVIDER','Timestamp bukti Meta tidak valid',502)
+  return new Date(value).toISOString()
+}
+function metaRecordId(value:unknown,compound=false):string {
+  if(typeof value!=='string'||!(compound?/^\d+(?:_\d+)?$/:/^\d+$/).test(value))throw new Fault('PROVIDER','ID bukti Meta tidak valid',502)
+  return value
+}
+async function metaRead(host:string,path:string,params:Record<string,string>,token:string) {
+  if(!token)throw new Fault('CONFLICT','Meta user/Page access token diperlukan',409)
+  return providerJSON(host+path+'?'+new URLSearchParams(params),{headers:{Authorization:`Bearer ${token}`}})
+}
 export class FacebookSource implements SourceAdapter {
   constructor(private token:string, private pageId:string){}
   async collect(input:any):Promise<Evidence[]> {
-    if(!this.token || !this.pageId) throw new Fault('CONFLICT','Facebook access token dan page_id diperlukan',409)
-    const limit=Math.min(Number(input.limit||10),25)
-    const fields='id,message,permalink_url,created_time,from'
-    const d=await providerJSON(`https://graph.facebook.com/v24.0/${encodeURIComponent(this.pageId)}/feed?fields=${fields}&limit=${limit}&access_token=${encodeURIComponent(this.token)}`)
-    if(!Array.isArray(d.data)) throw new Fault('PROVIDER','Respons Facebook Page feed tidak valid',502)
-    return d.data.filter((r:any)=>typeof r.message==='string'&&r.message.trim()).map((r:any)=>{
-      const eid=String(r.id||''); if(!eid) throw new Fault('PROVIDER','Bukti Facebook tidak memiliki ID',502)
-      const url=typeof r.permalink_url==='string'&&r.permalink_url.startsWith('https://')?r.permalink_url:''
-      if(!url) throw new Fault('PROVIDER','Bukti Facebook tidak memiliki permalink resmi',502)
-      return {external_id:`facebook:${eid}`,url,author:String(r.from?.name||this.pageId),published_at:String(r.created_time||''),raw_text:r.message.slice(0,20000),provider:'facebook',verified:true,metadata:{retrieved_from:'graph.facebook.com',page_id:this.pageId,evidence_type:'PAGE_FEED'}}
-    })
+    const page=assetId(this.pageId,'page_id'),limit=collectionLimit(input.limit)
+    const d=await metaRead('https://graph.facebook.com',`/${META_GRAPH_VERSION}/${page}/feed`,{fields:'id,message,permalink_url,created_time,is_published',limit:String(limit)},this.token)
+    if(!Array.isArray(d.data))throw new Fault('PROVIDER','Respons Facebook Page feed tidak valid',502)
+    // Only explicitly published content; unpublished/unknown records never enter FIN.
+    return d.data.slice(0,limit).filter((r:any)=>r.is_published===true&&typeof r.message==='string'&&r.message.trim()).map((r:any)=>({external_id:`facebook:${metaRecordId(r.id,true)}`,url:metaURL(r.permalink_url,'facebook'),author:page,published_at:metaTime(r.created_time),raw_text:r.message.slice(0,20000),provider:'facebook',verified:true,metadata:{retrieved_from:'graph.facebook.com',page_id:page,is_published:true,evidence_type:'PUBLISHED_PAGE_FEED',graph_version:META_GRAPH_VERSION}}))
   }
 }
 export class InstagramSource implements SourceAdapter {
   constructor(private token:string, private userId:string){}
   async collect(input:any):Promise<Evidence[]> {
-    if(!this.token || !this.userId) throw new Fault('CONFLICT','Instagram access token dan ig_user_id diperlukan',409)
-    const limit=Math.min(Number(input.limit||10),25)
-    const fields='id,caption,permalink,timestamp,username,media_type'
-    const d=await providerJSON(`https://graph.facebook.com/v24.0/${encodeURIComponent(this.userId)}/media?fields=${fields}&limit=${limit}&access_token=${encodeURIComponent(this.token)}`)
-    if(!Array.isArray(d.data)) throw new Fault('PROVIDER','Respons Instagram media tidak valid',502)
-    return d.data.filter((r:any)=>typeof r.caption==='string'&&r.caption.trim()).map((r:any)=>{
-      const eid=String(r.id||''); if(!eid||typeof r.permalink!=='string') throw new Fault('PROVIDER','Bukti Instagram tidak lengkap',502)
-      return {external_id:`instagram:${eid}`,url:r.permalink,author:String(r.username||this.userId),published_at:String(r.timestamp||''),raw_text:r.caption.slice(0,20000),provider:'instagram',verified:true,metadata:{retrieved_from:'graph.facebook.com',ig_user_id:this.userId,media_type:r.media_type||'UNKNOWN',evidence_type:'PROFESSIONAL_MEDIA'}}
-    })
+    const user=assetId(this.userId,'ig_user_id'),limit=collectionLimit(input.limit)
+    const d=await metaRead('https://graph.facebook.com',`/${META_GRAPH_VERSION}/${user}/media`,{fields:'id,caption,permalink,timestamp,username,media_type',limit:String(limit)},this.token)
+    if(!Array.isArray(d.data))throw new Fault('PROVIDER','Respons Instagram media tidak valid',502)
+    return d.data.slice(0,limit).filter((r:any)=>typeof r.caption==='string'&&r.caption.trim()).map((r:any)=>({external_id:`instagram:${metaRecordId(r.id)}`,url:metaURL(r.permalink,'instagram'),author:String(r.username||user),published_at:metaTime(r.timestamp),raw_text:r.caption.slice(0,20000),provider:'instagram',verified:true,metadata:{retrieved_from:'graph.facebook.com',ig_user_id:user,media_type:r.media_type||'UNKNOWN',evidence_type:'PROFESSIONAL_MEDIA',login_surface:'FACEBOOK_LOGIN',graph_version:META_GRAPH_VERSION}}))
   }
 }
 export class ThreadsSource implements SourceAdapter {
   constructor(private token:string){}
   async collect(input:any):Promise<Evidence[]> {
-    if(!this.token)throw new Fault('CONFLICT','Threads user access token diperlukan',409)
-    const query=text(input.query,'query',150)
-    const params=new URLSearchParams({q:query,search_type:'RECENT',limit:'5',fields:'id,text,permalink,timestamp,username,media_type',access_token:this.token})
-    const d=await providerJSON('https://graph.threads.com/v1.0/keyword_search?'+params)
+    const query=text(input.query,'query',150),limit=collectionLimit(input.limit??5)
+    const d=await metaRead('https://graph.threads.com','/v1.0/keyword_search',{q:query,search_type:'RECENT',limit:String(limit),fields:'id,text,permalink,timestamp,username,media_type'},this.token)
     if(!Array.isArray(d.data))throw new Fault('PROVIDER','Respons Threads keyword search tidak valid',502)
-    return d.data.filter((r:any)=>typeof r.text==='string'&&r.text.trim()).map((r:any)=>{
-      if(!/^\d+$/.test(String(r.id))||typeof r.permalink!=='string'||!/^https:\/\/(www\.)?threads\.(com|net)\//.test(r.permalink)||!r.timestamp)throw new Fault('PROVIDER','Bukti Threads tidak lengkap',502)
-      return {external_id:`threads:${r.id}`,url:r.permalink,author:String(r.username||''),published_at:r.timestamp,raw_text:r.text.slice(0,20000),provider:'threads',verified:true,metadata:{media_type:r.media_type||'UNKNOWN',retrieved_from:'graph.threads.com',scope:'PUBLIC_OR_AUTHENTICATED_USER_POSTS_DEPENDING_ON_META_APPROVAL'}}
-    })
+    return d.data.slice(0,limit).filter((r:any)=>typeof r.text==='string'&&r.text.trim()).map((r:any)=>({external_id:`threads:${metaRecordId(r.id)}`,url:metaURL(r.permalink,'threads'),author:String(r.username||''),published_at:metaTime(r.timestamp),raw_text:r.text.slice(0,20000),provider:'threads',verified:true,metadata:{media_type:r.media_type||'UNKNOWN',retrieved_from:'graph.threads.com',scope:'PUBLIC_OR_AUTHENTICATED_USER_POSTS_DEPENDING_ON_META_APPROVAL'}}))
   }
 }
 export function validateAssessment(input:any,evidence:string) {

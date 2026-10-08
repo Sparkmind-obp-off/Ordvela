@@ -21,8 +21,8 @@ app.use('/api/*',async(c,next)=>{
 })
 app.use('/api/*',bodyLimit({maxSize:32000,onError:c=>c.json({error:{code:'VALIDATION',message:'Payload terlalu besar',retryable:false},request_id:c.get('requestId')},413)}))
 app.get('/api/health',async c=>{
-  try { if(!c.env.DB) throw new Error('DB missing');await one(c.env.DB,'SELECT COUNT(*) n FROM workspaces');return c.json({data:{status:'ok',database:'ready',environment:c.env.ENVIRONMENT || 'unknown',jobs:'request-driven',version:'0.2.0'},request_id:c.get('requestId')}) }
-  catch {return c.json({data:{status:'blocked',database:'not-configured-or-migrated',version:'0.2.0'},request_id:c.get('requestId')},503)}
+  try { if(!c.env.DB) throw new Error('DB missing');await one(c.env.DB,'SELECT COUNT(*) n FROM workspaces');return c.json({data:{status:'ok',database:'ready',environment:c.env.ENVIRONMENT || 'unknown',jobs:'request-driven',version:'0.3.0'},request_id:c.get('requestId')}) }
+  catch {return c.json({data:{status:'blocked',database:'not-configured-or-migrated',version:'0.3.0'},request_id:c.get('requestId')},503)}
 })
 app.route('/api/auth',auth)
 app.route('/api',api)

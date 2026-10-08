@@ -1,5 +1,5 @@
 import { all, one, stmt, Env } from './db'
-import { id, now, Fault, normalize, digest, extractDemand, SCORE_VERSION, buildArtifact, validateArtifact, retryDelay } from './core'
+import { id, now, Fault, normalize, digest, extractDemand, qualifyMetaDemand, SCORE_VERSION, buildArtifact, validateArtifact, retryDelay } from './core'
 import { Evidence, GroqAdapter } from './adapters'
 import { collectFromProvider, requireEnabled, validateProvider, observeFailure, credential, manifest } from './providers'
 export async function enqueue(env:Env, w:string, actor:string, request:string, type:string, input:any, key:string) {
@@ -10,26 +10,32 @@ export async function enqueue(env:Env, w:string, actor:string, request:string, t
   return {id:row.id,status:row.status}
 }
 export async function ingest(env:Env, job:any, evidence:Evidence[]) {
-  const created:string[]=[]
+  const created:string[]=[],details:any[]=[]
+  let stored=0,duplicates=0,qualified=0,unqualified=0
   for(const e of evidence) {
     const sourceId = `${job.workspace_id}:${e.provider}`
     await stmt(env.DB,'INSERT OR IGNORE INTO sources (id,workspace_id,type,name) VALUES (?,?,?,?)',sourceId,job.workspace_id,e.provider,e.provider).run()
     const normalized=normalize(e.raw_text), fingerprint=await digest(normalized.toLowerCase())
-    const prior=await one(env.DB,'SELECT o.id FROM signals s JOIN opportunities o ON o.signal_id=s.id WHERE s.workspace_id=? AND (s.external_id=? OR s.fingerprint=?)',job.workspace_id,e.external_id,fingerprint)
-    if(prior) { created.push(prior.id); continue }
+    const prior=await one(env.DB,'SELECT s.id AS signal_id,o.id FROM signals s LEFT JOIN opportunities o ON o.signal_id=s.id WHERE s.workspace_id=? AND (s.external_id=? OR s.fingerprint=?)',job.workspace_id,e.external_id,fingerprint)
+    if(prior) { duplicates++;if(prior.id)created.push(prior.id);details.push({signal_id:prior.signal_id,duplicate:true,opportunity_id:prior.id||null});continue }
     const s=id(),o=id(),score=extractDemand(e.raw_text,e.verified),time=now()
+    const gate=['facebook','instagram','threads'].includes(e.provider)?qualifyMetaDemand(e.raw_text):null
+    const eligible=gate?gate.qualified:true
     const writes=[
-      stmt(env.DB,'INSERT OR IGNORE INTO signals (id,workspace_id,source_id,external_id,url,author,published_at,captured_at,raw_text,normalized_text,metadata,fingerprint) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',s,job.workspace_id,sourceId,e.external_id,e.url,e.author,e.published_at,time,e.raw_text,normalized,JSON.stringify({...e.metadata,normalized_contract:{source:e.provider,externalId:e.external_id,canonicalUrl:e.url,authorRef:e.author,publishedAt:e.published_at,retrievedAt:new Date(time).toISOString(),title:normalized.slice(0,200),language:'unknown',contentHash:fingerprint,rawReference:e.url}}),fingerprint),
-      stmt(env.DB,`INSERT INTO opportunities (id,workspace_id,signal_id,title,problem,desired_outcome,intent,urgency,budget_signal,confidence,opportunity_score,recommended_action,status,created_at,updated_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,'NEW',?,? WHERE EXISTS (SELECT 1 FROM signals WHERE id=?)`,o,job.workspace_id,s,score.title,score.problem,score.desired_outcome,score.intent,score.urgency,score.budget_signal,score.confidence,score.total,score.recommended_action,time,time,s),
+      stmt(env.DB,'INSERT OR IGNORE INTO signals (id,workspace_id,source_id,external_id,url,author,published_at,captured_at,raw_text,normalized_text,metadata,fingerprint) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',s,job.workspace_id,sourceId,e.external_id,e.url,e.author,e.published_at,time,e.raw_text,normalized,JSON.stringify({...e.metadata,...(gate?{demand_extraction:gate}:{}),normalized_contract:{source:e.provider,externalId:e.external_id,canonicalUrl:e.url,authorRef:e.author,publishedAt:e.published_at,retrievedAt:new Date(time).toISOString(),title:normalized.slice(0,200),language:'unknown',contentHash:fingerprint,rawReference:e.url}}),fingerprint),
+      stmt(env.DB,`INSERT INTO opportunities (id,workspace_id,signal_id,title,problem,desired_outcome,intent,urgency,budget_signal,confidence,opportunity_score,recommended_action,status,created_at,updated_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,'NEW',?,? WHERE EXISTS (SELECT 1 FROM signals WHERE id=?) AND ?=1 AND (SELECT COUNT(*) FROM opportunities WHERE workspace_id=?)<500`,o,job.workspace_id,s,score.title,score.problem,score.desired_outcome,score.intent,score.urgency,score.budget_signal,score.confidence,score.total,score.recommended_action,time,time,s,eligible?1:0,job.workspace_id),
       stmt(env.DB,'INSERT INTO opportunity_scores (id,workspace_id,opportunity_id,version,components,total,created_at) SELECT ?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM opportunities WHERE id=?)',id(),job.workspace_id,o,SCORE_VERSION,JSON.stringify(score.components),score.total,time,o),
-      stmt(env.DB,'INSERT INTO audit_events (id,workspace_id,actor_id,operation,target_id,request_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)',id(),job.workspace_id,job.actor_id,'signal.ingest',s,job.request_id,JSON.stringify({external_id:e.external_id,version:SCORE_VERSION}),time),
+      stmt(env.DB,'INSERT INTO audit_events (id,workspace_id,actor_id,operation,target_id,request_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)',id(),job.workspace_id,job.actor_id,'signal.ingest',s,job.request_id,JSON.stringify({external_id:e.external_id,version:SCORE_VERSION,qualification:gate?.reason||'LEGACY_PUBLIC_SOURCE'}),time),
       stmt(env.DB,'UPDATE sources SET last_run_at=? WHERE id=?',time,sourceId)
     ]
-    await env.DB.batch(writes)
-    const actual=await one(env.DB,'SELECT o.id FROM opportunities o JOIN signals s ON o.signal_id=s.id WHERE s.workspace_id=? AND (s.external_id=? OR s.fingerprint=?)',job.workspace_id,e.external_id,fingerprint)
-    if(actual) created.push(actual.id)
+    const result=await env.DB.batch(writes)
+    const actual=await one(env.DB,'SELECT s.id AS signal_id,o.id FROM signals s LEFT JOIN opportunities o ON o.signal_id=s.id WHERE s.workspace_id=? AND (s.external_id=? OR s.fingerprint=?)',job.workspace_id,e.external_id,fingerprint)
+    if(!result[0].meta.changes){duplicates++;if(actual?.id)created.push(actual.id);details.push({signal_id:actual?.signal_id||null,duplicate:true,opportunity_id:actual?.id||null});continue}
+    stored++
+    if(actual?.id) {created.push(actual.id);qualified++}else unqualified++
+    details.push({signal_id:s,opportunity_id:actual?.id||null,qualification:gate,opportunity_created:!!actual?.id,...(eligible&&!actual?.id?{blocked_reason:'WORKSPACE_OPPORTUNITY_CAP_OR_CONCURRENT_DEDUP'}:{})})
   }
-  return { opportunity_ids:created, evidence_count:evidence.length }
+  return { opportunity_ids:[...new Set(created)], evidence_count:evidence.length,stored_count:stored,duplicate_count:duplicates,qualified_count:qualified,unqualified_count:unqualified,extractions:details }
 }
 async function perform(env:Env,job:any) {
   const input=JSON.parse(job.input)

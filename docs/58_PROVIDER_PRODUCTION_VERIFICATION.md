@@ -1,7 +1,13 @@
 # ORDVELA — Provider Operating Layer & Production Verification
 Date: 2026-10-08
-Current release: 0.2.0 / V1 LIVE / V2 SELECTED PROVIDERS
+Historical release below: 0.2.0 / V1 LIVE / V2 SELECTED PROVIDERS
 Supersedes the deployment blocker in report 54 and earlier phase snapshots.
+
+## FIN v0.3 verification addendum
+Current FIN implementation and real supplied-token proof: report 59. Eleven implemented adapters/built-ins and seven planned entries; HN/GitHub credential regression repaired; Meta bounds, published filtering, safe transport/errors, settings UI and distinct demand qualification implemented. Local results: 37 tests, 320 API assertions and 42 browser checks PASS; build/typecheck PASS. Actual Meta: Facebook identity accessible but four Page feeds permission-blocked (10); all supplied candidates rejected by Threads (190); no linked IG asset returned. No successful real Meta evidence/opportunities/scores: 0/0/0. Temporary local encrypted QA credentials revoked; no operator production Meta import/enable. BYOK v0.3 deployment/final smoke pending. No secret/root rotation or DB schema change in this increment.
+
+## Historical v0.2 verification (not latest Meta proof)
+The counts, token-absence observation, immutable URLs and rollback below describe the earlier v0.2 run, not the newest upload. Any upstream-added Facebook/Instagram statements below are superseded by the actually tested report 59.
 
 ## IMPLEMENTED
 - Existing V0 revenue loop preserved, not replaced. Remote GitHub additions through `7f2c85f` audited and fast-forwarded before implementation.

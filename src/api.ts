@@ -4,7 +4,7 @@ import { all,one,stmt } from './db'
 import { Fault,text,choice,confirm,id,now,blueprint,TEMPLATES,outcomeTransition,digest } from './core'
 import { registryStatus, manifest, generateProvider, requireEnabled } from './providers'
 import { passwordHash } from './auth'
-import { seal } from './adapters'
+import { seal, collectionLimit, assetId } from './adapters'
 import { enqueue,runJobs } from './jobs'
 export const api = new Hono<App>()
 api.use('*',authenticate)
@@ -59,11 +59,15 @@ api.delete('/members/:id',async c=>{
 api.post('/signals/ingest',async c=>{
   const b=await body(c),provider=choice(b.provider,'provider',['hacker-news','github-issues','threads','facebook','instagram'])
   await requireEnabled(c.env,w(c),provider)
-  const input={provider,query:b.query?text(b.query,'query',150):undefined,reference:b.reference?text(b.reference,'reference',500):undefined,limit:b.limit?Math.min(Math.max(Number(b.limit),1),25):undefined}
-  if(!input.query && !input.reference) throw new Fault('VALIDATION','Query atau URL bukti diperlukan')
-  if(provider==='github-issues' && !input.reference) throw new Fault('VALIDATION','URL issue diperlukan')
-  if(provider==='threads' && !input.query) throw new Fault('VALIDATION','Threads memerlukan query keyword')
-  if((provider==='facebook'||provider==='instagram') && input.reference) throw new Fault('VALIDATION','Meta discovery menggunakan provider configuration; jangan kirim credential atau raw endpoint')
+  if(Object.keys(b).some(k=>!['provider','query','reference','limit','idempotency_key'].includes(k)))throw new Fault('VALIDATION','Ingestion menerima parameter discovery saja; bukan credential/endpoint')
+  const feed=provider==='facebook'||provider==='instagram'
+  const input={provider,query:b.query?text(b.query,'query',150):undefined,reference:b.reference?text(b.reference,'reference',500):undefined,...(b.limit!==undefined?{limit:collectionLimit(b.limit)}:{})}
+  if(feed&&(input.query||input.reference))throw new Fault('VALIDATION','Facebook/Instagram hanya authorized feed/media; bukan keyword search atau endpoint bebas')
+  if(!feed&&!input.query&&!input.reference)throw new Fault('VALIDATION','Query atau URL bukti diperlukan')
+  if(provider==='github-issues'&&!input.reference)throw new Fault('VALIDATION','URL issue diperlukan')
+  if(provider==='threads'&&(!input.query||input.reference))throw new Fault('VALIDATION','Threads memerlukan keyword, bukan URL bukti')
+  const signals=await one(c.env.DB,'SELECT COUNT(*) n FROM signals WHERE workspace_id=?',w(c))
+  if(signals.n>=5000)throw new Fault('RATE_LIMIT','Batas 5000 evidence records per workspace tercapai',429)
   const total=await one(c.env.DB,'SELECT COUNT(*) n FROM opportunities WHERE workspace_id=?',w(c))
   if(total.n>=500) throw new Fault('RATE_LIMIT','Batas V0: 500 opportunities per workspace',429)
   return job(c,'INGEST',input,text(b.idempotency_key || id(),'idempotency_key',160))
@@ -233,7 +237,7 @@ api.post('/providers',async c=>{
   if(m.implementation==='PLANNED'||!m.credential_fields.length)throw new Fault('CONFLICT','Provider tidak menerima credential; lihat checklist dokumentasi',409)
   const supplied=b.credentials||(b.api_key?{api_key:b.api_key}:{})
   if(!supplied||typeof supplied!=='object'||Array.isArray(supplied)||Object.keys(supplied).some(k=>!m.credential_fields.includes(k)))throw new Fault('VALIDATION','Credential fields tidak sesuai manifest')
-  const values=Object.fromEntries(m.credential_fields.map(f=>[f,text(supplied[f],f,4000,10)])),cipher=await seal(JSON.stringify(values),c.env.CREDENTIAL_MASTER_KEY||''),pid=`${w(c)}:${m.id}`
+  const values=Object.fromEntries(m.credential_fields.map(f=>[f,f.endsWith('_id')?assetId(supplied[f],f):text(supplied[f],f,4000,10)])),cipher=await seal(JSON.stringify(values),c.env.CREDENTIAL_MASTER_KEY||''),pid=`${w(c)}:${m.id}`
   const config=m.id==='groq'?{model:text(b.model||m.default_model,'model',100)}:{}
   await stmt(c.env.DB,"INSERT INTO providers (id,workspace_id,kind,status,credential_cipher,updated_at,enabled,version,config) VALUES (?,?,?,'CONFIGURED',?,?,0,?,?) ON CONFLICT(workspace_id,kind) DO UPDATE SET credential_cipher=excluded.credential_cipher,status='CONFIGURED',updated_at=excluded.updated_at,enabled=0,config=excluded.config,validated_at=NULL,health_checked_at=NULL,health_status='NOT_CHECKED',error_code=NULL,error_message=NULL",pid,w(c),m.id,cipher,now(),m.version,JSON.stringify(config)).run()
   await audit(c,'provider.rotated',pid,{kind:m.id});return ok(c,{id:pid,status:'CONFIGURED',enabled:false,raw_secret_returned:false})

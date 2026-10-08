@@ -4,6 +4,13 @@
 
 **V0 implemented. V1 live on Cloudflare BYOK. V2 provider operating layer implemented, selected live access still requires credentials/approval.** No replacement repository, master brand or custom domain.
 
+## FIN Meta v0.3 — actual state
+Bounded official read adapters, encrypted Facebook/Instagram/Threads configuration, provider-specific FIN modes and evidence review are implemented. New Meta posts must pass `meta-demand-gate-v1` before opportunity creation; non-demand signals remain inspectable. `rules-v1.0` and historical scores are unchanged. HN/GitHub public-source regression repaired.
+
+Latest supplied tokens were actually tested: three Facebook identity successes, all Threads token checks rejected with 190, four authorized Page feeds rejected with permission error 10, no linked Professional IG asset returned. Temporary encrypted local QA credentials revoked. Real Meta evidence/opportunities/scores: **0/0/0**. Production Meta remains unconfigured/not enabled pending passing validation and explicit Page/workspace selection. Do not mistake fixture tests or app deployment for live Meta coverage. Full proof and operator steps: [report 59](docs/59_FIN_META_IMPLEMENTATION.md).
+
+Local verification: build/typecheck PASS; 37 tests PASS; API 320 recorded assertions; browser 42 checks. Production v0.3 deployment verification is recorded in report 58 after release.
+
 ## URLs / release
 - Production: https://ordvela.pages.dev
 - Health: https://ordvela.pages.dev/api/health
@@ -33,10 +40,15 @@
 | Hacker News | Operational; live source health and production ingestion proven |
 | GitHub Issues | Existing public adapter preserved, contract-tested; production health depends on shared unauthenticated API quota |
 | Groq | Adapter/model validation and grounded assessment tested live; model `openai/gpt-oss-20b`; exposed supplied key NOT imported to production, rotate first |
-| Threads | Official adapter/fixtures tested; NOT_CONFIGURED without authorized user access token; public search approval not verified |
+| Threads | Bounded keyword adapter tested; supplied candidates rejected by Threads (190), local AUTH_ERROR; not production enabled |
+| Facebook Pages | Published authorized feed adapter tested; four actual Page feeds permission-blocked (10), local BLOCKED_PERMISSION; no live ingestion |
+| Instagram Professional | Facebook Login media/caption adapter tested; no linked IG User ID returned through authorized Pages, live ingestion BLOCKED |
 | OpenAI | Credential/models validation adapter; no supplied key or live generation proof |
 | Templates / scoring / Pages artifacts / manual handoff | Operational built-ins |
-| Reddit, X, Facebook, Instagram, Web/Search, Jobs, Email, WhatsApp, independent Workers jobs | Registry entries only, `DOCUMENTATION_REQUIRED`; no fake live connectors |
+| Reddit, X, Web/Search, Jobs, Email, WhatsApp, independent Workers jobs | Registry entries only, `DOCUMENTATION_REQUIRED`; no fake live connectors |
+
+## FIN operating guide
+Settings → Providers: Threads token; Facebook Page token + Page ID; Instagram Facebook Login token + linked Professional IG User ID. Empty password inputs never show stored values. Configure/rotate → Validate → Enable only if healthy. Rotate exposed external credentials first. Demand Feed → Temukan demand selects only available discovery providers; Meta limit is 1–25, one API page, no automatic paging. Review job counts and raw signals/gate reasons, then review qualified opportunities. No scraping/private-account search/automatic contact.
 
 ## Operator guide
 1. Sign in with private operator onboarding access; immediately change the temporary password in Settings. Do not publish that file or credentials.
@@ -64,7 +76,7 @@ UI `/` hashes: `#feed`, `#opportunities`, `#execution`, `#distribution`, `#outco
 Public: `GET /api/health`, `GET /demo/:token` (safe published artifact only).
 Auth: `POST /api/auth/register|login|logout`; production register requires `registration_token`.
 Protected API domains: `/api/me`, `/workspaces`, `/members`, `/sources`, `/signals`, `/opportunities`, `/executions`, `/distributions`, `/outcomes`, `/metrics`, `/providers`, `/provider-generator`, `/usage`, `/audit`, `/settings`, `/jobs`.
-- `POST /api/signals/ingest`: provider, query/reference, idempotency_key. HN/GitHub/Threads only.
+- `POST /api/signals/ingest`: provider + idempotency_key; HN query/reference, GitHub canonical reference, Threads query + optional integer limit 1–25, Facebook/Instagram feed/media with optional limit only (no query/reference). Token/asset IDs come only from encrypted provider configuration.
 - `GET /api/opportunities?q=&status=&min_score=`; `GET .../:id`; `POST .../:id/decision`.
 - `POST .../:id/assess`: Groq, explicit confirm; `GET .../:id/assessments`.
 - `POST /api/executions`; `GET .../:id`; `POST .../:id/publish|unpublish` with confirmation.
@@ -82,10 +94,10 @@ D1: users, sessions, auth_attempts, workspaces, workspace_members, providers (en
 Demos serve stored artifacts, not independent customer deployments. Visitor task/form data is session-local unless visitors export their own JSON file; ORDVELA's operational state is durable D1.
 
 ## Verification
-- Build and TypeScript: PASS; worker approximately 107 kB uncompressed.
-- `npm test`: 27/27 PASS, including provider/generator/normalization/credential/AI-grounding contracts and durable lifecycle.
-- `npm run test:e2e`: 245 assertions PASS in recorded run (poll timing can increase assertion count).
-- `npm run test:browser`: 30 checks PASS; desktop 1440×1000 / mobile 390×844.
+- Build and TypeScript: PASS; worker approximately 116 kB uncompressed.
+- `npm test`: 37/37 PASS, including provider/generator/normalization/credential/AI-grounding contracts and durable lifecycle.
+- `npm run test:e2e`: 320 assertions PASS in recorded run (poll timing can increase assertion count).
+- `npm run test:browser`: 42 checks PASS; desktop 1440×1000 / mobile 390×844.
 - `npm run test:production`: 77 checks PASS using isolated archived QA workspace and secure `TEST_REGISTRATION_TOKEN` environment.
 - `node tests/production-browser.mjs`: 14 authenticated read-only production checks PASS; secure operator credentials supplied only through environment.
 - Live Groq assessment: PASS, one exact grounded quote, 264 input / 159 output tokens in recorded successful call. Supplied key was not installed into production.

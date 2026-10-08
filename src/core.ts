@@ -28,6 +28,15 @@ export function extractDemand(raw: string, verified: boolean) {
   const total = Math.round(Object.entries(WEIGHTS).reduce((sum,[k,w])=>sum + components[k as keyof typeof components]*w,0))
   return { title: t.slice(0,110), problem: t.slice(0,1800), desired_outcome: 'Hipotesis: alur kerja lebih sederhana untuk kebutuhan di atas. Konfirmasi dengan pemilik kebutuhan.', intent, urgency: urgent ? 'HIGH' : 'UNKNOWN', budget_signal: budget, confidence, components, total, recommended_action: need ? 'Periksa bukti, konfirmasi kebutuhan, lalu pilih template demo yang relevan.' : 'Validasi apakah ini kebutuhan aktif sebelum membangun.' }
 }
+// A separate FIN gate; scoring weights/version/history are deliberately unchanged.
+export function qualifyMetaDemand(raw:string) {
+  const t=normalize(raw)
+  const request=t.match(/\b(?:i|we)\s+(?:need|want|am looking for|are looking for|cannot|can't|struggle)|\b(?:looking for|struggling with|can anyone recommend|does anyone know|how (?:do|can) (?:i|we)|need help|help me|butuh|mencari|kesulitan|ada yang bisa|bagaimana cara)\b/i)
+  const software=t.match(/\b(?:software|tools?|apps?|automation|automate|workflow|dashboard|systems?|website|api|aplikasi|otomatisasi|sistem)\b/i)
+  const excluded=/\b(?:no longer need|don't need|do not need|tidak butuh|tidak mencari|we offer|we provide|our product|buy now|sign up now|kami menawarkan|promo diskon)\b/i.test(t)
+  const qualified=!!request&&!!software&&!excluded
+  return {version:'meta-demand-gate-v1',qualified,classification:qualified?'DEMAND_HYPOTHESIS_REQUIRES_HUMAN_REVIEW':'NO_QUALIFIED_DEMAND',reason:excluded?'PROMOTION_OR_NEGATED_REQUEST':!request?'NO_EXPLICIT_REQUEST':!software?'NO_SUPPORTED_SOLUTION_CONTEXT':'EXPLICIT_REQUEST_AND_SUPPORTED_CONTEXT',evidence_quotes:qualified?[request![0],software![0]]:[],score_modified:false}
+}
 export const TEMPLATES = ['intake','calculator','workflow']
 export function blueprint(op: any, template: string, publicTitle: string, publicSummary: string) {
   choice(template,'template',TEMPLATES)

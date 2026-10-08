@@ -12,6 +12,7 @@ await owner.req('/members','POST',{email:viewer.email,role:'VIEWER',confirm:true
 await owner.req('/opportunities?min_score=NaN','GET',undefined,400);
 await owner.req('/signals/ingest','POST',{provider:'not-a-provider',query:'tool'},400);
 await owner.req('/signals/ingest','POST',{provider:'hacker-news',query:'tool'},403,{Origin:'https://evil.example'});
+for(const limit of [0,-1,26,1.5,'oops',null,true])await owner.req('/signals/ingest','POST',{provider:'hacker-news',query:'tool',limit},400);
 const sourceURL=process.env.TEST_SIGNAL_URL||'https://news.ycombinator.com/item?id=36717102';
 const ingest=await owner.req('/signals/ingest','POST',{provider:'hacker-news',reference:sourceURL,idempotency_key:'golden-import'},202);await owner.wait(ingest.id);
 const duplicateJob=await owner.req('/signals/ingest','POST',{provider:'hacker-news',reference:sourceURL,idempotency_key:'golden-import'},202);check(duplicateJob.id===ingest.id,'job idempotency');
@@ -37,6 +38,16 @@ await viewer.req('/distributions/'+dist.id+'/approve','POST',{confirm:true},403)
 await owner.req('/executions/'+eid+'/unpublish','POST',{confirm:true});check((await fetch(BASE+demo)).status===404,'revocation hides old demo');
 
 const providers=await owner.req('/providers');check(providers.registry.length>=18,'central provider registry');check(providers.registry.find(p=>p.id==='threads').status==='NOT_CONFIGURED','Threads not silently configured with App Secret');check(providers.registry.find(p=>p.id==='reddit').status==='DOCUMENTATION_REQUIRED','planned providers honest');
+for(const [kind,field] of [['facebook','page_id'],['instagram','ig_user_id']]){
+ await owner.req('/providers','POST',{kind,credentials:{access_token:'QA-fixture-not-live'},confirm:true},400);
+ await owner.req('/providers','POST',{kind,credentials:{access_token:'QA-fixture-not-live',[field]:'https://evil.test'},confirm:true},400);
+ await owner.req('/providers','POST',{kind,credentials:{access_token:'QA-fixture-not-live',[field]:'12345',app_secret:'not-accepted'},confirm:true},400);
+ const configured=await owner.req('/providers','POST',{kind,credentials:{access_token:'QA-fixture-not-live',[field]:'12345'},confirm:true});check(!configured.enabled,'Meta configure never enables');
+ const safe=await owner.req('/providers');check(!JSON.stringify(safe).includes('QA-fixture-not-live'),'Meta registry returns no credential');
+ await owner.req('/providers/'+kind+'/enable','POST',{confirm:true},409);
+ await owner.req('/signals/ingest','POST',{provider:kind,limit:1},409);
+ await owner.req('/providers/'+kind,'DELETE',{confirm:true});
+}
 await owner.req('/providers/groq/enable','POST',{confirm:true},409);
 await owner.req('/signals/ingest','POST',{provider:'threads',query:'tool'},409);
 await owner.req('/opportunities/'+op.id+'/assess','POST',{provider:'groq',confirm:false},400);
