@@ -1,18 +1,18 @@
-# Manhunter — Product Vision
+# Ordvela Intelligence — Product Vision
 
 Status: LOCKED FOR EXECUTION
 Date: 2026-10-08
 
 ## Position
-Manhunter is the working name for Ordvela's first demand-to-revenue system under Ordvela Intelligence.
+Ordvela Intelligence is the working name for Ordvela's first demand-to-revenue system under Ordvela Intelligence.
 
-It is not a separate master brand or legal entity. Keep naming technical and functional until independent commercial evidence justifies a product name.
+It is not a new master brand. It is not required to remain the permanent public product name.
 
 Permanent architecture:
 REAL DEMAND → OPPORTUNITY → EXECUTION → DEMO → DISTRIBUTION → DEAL → REVENUE
 
 ## Problem
-Most lead-generation systems optimize for volume. Manhunter optimizes for evidence of real demand and commercial potential.
+Most lead-generation systems optimize for volume. Ordvela Intelligence optimizes for evidence of real demand and commercial potential.
 
 ## Three Layers
 1. Intelligence — discover, verify, classify, score and rank demand.
@@ -22,7 +22,7 @@ Most lead-generation systems optimize for volume. Manhunter optimizes for eviden
 ## Product Principle
 LOCK THE FUNCTION. FLEX THE NAME.
 
-Screen names, filenames and module names should remain technical and descriptive. Functional boundaries remain modular.
+Screen names, filenames and future product names may change. Functional boundaries remain modular.
 
 ## Commercial Principle
 Build commercial-ready foundations from day one, but do not overbuild billing, self-service or enterprise features before demand is proven.
