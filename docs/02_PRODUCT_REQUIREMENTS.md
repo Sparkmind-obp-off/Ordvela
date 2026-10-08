@@ -1,47 +1,20 @@
 # ORDVELA INTELLIGENCE — Product Requirements
 Status: V0 CANONICAL
 
-## Primary user
-An operator who needs to find commercially meaningful demand and act on it quickly.
+## Primary Job
+Find commercially meaningful demand, act on it quickly, and learn from the outcome.
 
-## Primary job
-Find the strongest opportunities, understand the evidence, produce a relevant demo, prepare a credible message, contact manually and learn from the outcome.
+## Intelligence
+Ingest public signals; preserve evidence; normalize/deduplicate; extract problem, desired outcome and intent; score and rank opportunities; expose original evidence.
 
-## Functional requirements
-### Intelligence
-- ingest public signals
-- preserve source evidence
-- normalize and deduplicate
-- extract problem, desired outcome and intent
-- calculate explainable scores
-- rank opportunities
-- open the original evidence
+## Execution
+Select opportunity; recommend solution; create bounded blueprint; generate/build constrained prototype; validate; deploy shareable demo.
 
-### Execution
-- select an opportunity
-- produce a solution recommendation
-- create a bounded blueprint
-- generate/build a constrained prototype
-- validate
-- deploy a shareable demo
+## Distribution
+Prepare target context, evidence, demo and concise message; require human approval; record contact, follow-up and outcome.
 
-### Distribution
-- create target context
-- attach evidence and demo
-- generate a concise message
-- require human approval
-- record contact and outcome
-- schedule follow-up
+## Non-Functional
+Provider-independent core, server-side secrets, explicit failure/retry states, idempotent ingestion where practical, auditability, workspace isolation and observable jobs.
 
-## Non-functional requirements
-- provider-independent core
-- server-side secrets
-- explicit failure states
-- idempotent ingestion where practical
-- audit trail for material actions
-- workspace isolation
-- responsive operator UI
-- observable jobs
-
-## V0 success
-One real public signal can be transformed into a verified opportunity, demo, approved message and recorded outcome without manual database manipulation.
+## V0 Success
+One real public signal becomes a verified opportunity, demo, approved message and recorded outcome without manual database manipulation.
