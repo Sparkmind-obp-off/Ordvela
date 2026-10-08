@@ -50,7 +50,6 @@ export class OpenAIAdapter implements LLMAdapter {
   async validate(key:string) { const d=await providerJSON('https://api.openai.com/v1/models',{headers:{Authorization:`Bearer ${key}`}}); if(!Array.isArray(d.data)) throw new Fault('PROVIDER','Respons OpenAI tidak valid',502) }
 }
 export type NormalizedEvidence = Evidence & {source:string;externalId:string;canonicalUrl:string;authorRef:string;publishedAt:string;retrievedAt:string;title:string;body:string;language:string;engagement:Record<string,unknown>;evidence:{text:string;provenance:string};rawReference:string;contentHash:string}
-export function normalizeEvidenceSync(e:Evidence):NormalizedEvidence { throw new Error('use async normalizeEvidence') }
 export async function normalizeEvidence(e:Evidence):Promise<NormalizedEvidence> {
   if(!e.external_id||!e.provider||!e.raw_text||e.raw_text.length>20000)throw new Fault('PROVIDER','Source record tidak lengkap atau terlalu besar',502)
   const url=new URL(e.url)
@@ -67,7 +66,8 @@ export class FacebookSource implements SourceAdapter {
     if(!Array.isArray(d.data)) throw new Fault('PROVIDER','Respons Facebook Page feed tidak valid',502)
     return d.data.filter((r:any)=>typeof r.message==='string'&&r.message.trim()).map((r:any)=>{
       const eid=String(r.id||''); if(!eid) throw new Fault('PROVIDER','Bukti Facebook tidak memiliki ID',502)
-      const url=typeof r.permalink_url==='string'&&r.permalink_url.startsWith('https://')?r.permalink_url:`https://www.facebook.com/${encodeURIComponent(eid)}`
+      const url=typeof r.permalink_url==='string'&&r.permalink_url.startsWith('https://')?r.permalink_url:''
+      if(!url) throw new Fault('PROVIDER','Bukti Facebook tidak memiliki permalink resmi',502)
       return {external_id:`facebook:${eid}`,url,author:String(r.from?.name||this.pageId),published_at:String(r.created_time||''),raw_text:r.message.slice(0,20000),provider:'facebook',verified:true,metadata:{retrieved_from:'graph.facebook.com',page_id:this.pageId,evidence_type:'PAGE_FEED'}}
     })
   }
