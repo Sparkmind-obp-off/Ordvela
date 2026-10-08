@@ -11,7 +11,7 @@ One candidate staged: ytjar/yt-api, allowlisted host `yt-api.p.rapidapi.com`, GE
 
 Settings → RapidAPI: register metadata → OWNER review terms/schema → verify subscribed plan and hard-limit/no-overage across all billing dimensions → record free quota/period → authorize one bounded Rp0 validation → inspect usable real output → quality approve → enable config + workspace provider. Until then: MOCK / DISCOVERED, disabled. Limits: 1 request, 10 items, 10s/300kB, 30-day UTC scope; shared quota reservations, no external retry/paid fallback. `maxSpend=0` enforced. No guessed health/identity endpoint. A generic Validate button cannot manufacture live authentication.
 
-Local verification: 69 tests (18 RapidAPI), 312–324 API assertions and 56 desktop/mobile browser checks PASS; typecheck/build PASS, npm audit zero vulnerabilities. Full mock produces two evidence records, one demand opportunity and one non-demand signal; cross-provider dedup preserves canonical identity and additional acquisition receipts. Live free validation / Apify comparison remain blocked by missing account-plan proof. Production results recorded in doc 62 after deployment. GitHub push still requires restored write authorization; commits retained locally.
+Local verification: 69 tests (18 RapidAPI), 312–324 API assertions and 56 desktop/mobile browser checks PASS; typecheck/build PASS, npm audit zero vulnerabilities. Full mock produces two evidence records, one demand opportunity and one non-demand signal; cross-provider dedup preserves canonical identity and additional acquisition receipts. Live free validation / Apify comparison remain blocked by missing account-plan proof. Production v0.5.0 LIVE on https://ordvela.pages.dev; immutable release https://ba52f2d1.ordvela.pages.dev. Remote migration 0004 applied after private backup. Production RapidAPI safe-gate 78 checks, golden path 77 checks and authenticated desktop/mobile browser 14 checks PASS. One operator candidate DISCOVERED/MOCK/disabled; provider key configured, health UNKNOWN/not live-validated. Real RapidAPI requests/evidence/opportunities 0/0/0; no paid calls or terms approvals. Details in doc 62. GitHub push still requires restored write authorization; commits retained locally.
 
 ### RapidAPI functional API entry points
 Authenticated and workspace-scoped: `GET /api/rapidapi`, `POST /api/rapidapi/configs`, `POST /api/rapidapi/configs/:id/review|policy|approve|enable|disable`, `POST /api/rapidapi/dry-run`, `GET|POST /api/rapidapi/acquisitions`, `POST .../:id/cancel`, `GET .../:id/evidence`; mutations OWNER only. `GET /api/acquisition-router?capability=youtube-comments&max_spend=0` is recommendation only; `GET /api/provider-evaluations?days=30` derives durable metrics (1–90 days). No secret endpoint. Paid eligibility false; assisted revenue non-additive; currencies never mixed; zero-cost ROI undefined/null.
@@ -36,7 +36,7 @@ Local verification: build/typecheck PASS; 37 tests PASS; API 320 recorded assert
 - Repository: https://github.com/Sparkmind-obp-off/Ordvela — branch `main`.
 - Runtime: Hono + TypeScript + Cloudflare Pages + dedicated `ordvela-production` D1.
 - Migrations `0001_initial.sql`, `0002_provider_registry.sql`, `0003_apify_acquisition.sql`, `0004_acquisition_provider_configs.sql` applied locally and remotely (additive Actor metadata/jobs/provenance). Placeholder database UUID removed.
-- Production `CREDENTIAL_MASTER_KEY`, `REGISTRATION_TOKEN` `APIFY_API_TOKEN` and `RAPIDAPI_KEY` are managed server secrets, never repository variables. Public signup disabled; registration requires operator invitation. Sandbox can allow self-registration through ignored `.dev.vars`.
+- Production `CREDENTIAL_MASTER_KEY`, `REGISTRATION_TOKEN`, `APIFY_API_TOKEN` and `RAPIDAPI_KEY` are managed server secrets, never repository variables. Public signup disabled; registration requires operator invitation. Sandbox can allow self-registration through ignored `.dev.vars`.
 - Health/auth/demo/golden-path production smoke passed. Compatible deployment rollback and restoration exercised successfully. This is a verified V1 release, not a claim of complete enterprise hardening or proven customer revenue.
 
 ## Implemented capabilities
@@ -125,11 +125,12 @@ D1: users, sessions, auth_attempts, workspaces, workspace_members, providers (en
 Demos serve stored artifacts, not independent customer deployments. Visitor task/form data is session-local unless visitors export their own JSON file; ORDVELA's operational state is durable D1.
 
 ## Verification
-- Build and TypeScript: PASS; worker approximately 151 kB uncompressed.
-- `npm test`: 51/51 PASS, including provider/generator/normalization/credential/AI-grounding contracts and durable lifecycle.
+- Latest v0.5 build and TypeScript: PASS; worker approximately 187.5 kB uncompressed.
+- `npm test`: 69/69 PASS, including 18 RapidAPI contracts, shared acquisition/security, provider/generator/normalization/credential/AI-grounding contracts and durable lifecycle.
 - `npm run test:e2e`: 320 assertions PASS (final repeat 312, both successful; polling-dependent count) in recorded run (poll timing can increase assertion count).
-- `npm run test:browser`: 48 checks PASS; desktop 1440×1000 / mobile 390×844.
+- `npm run test:browser`: 56 checks PASS; desktop 1440×1000 / mobile 390×844.
 - `npm run test:production`: 77 checks PASS using isolated archived QA workspace and secure `TEST_REGISTRATION_TOKEN` environment.
+- `node tests/rapidapi-production.mjs`: 78 production SAFE DEPLOYMENT GATE checks PASS, not live vendor-validation proof; secure TEST_OPERATOR_EMAIL/TEST_OPERATOR_PASSWORD/TEST_RAPIDAPI_SECRET environment required.
 - `node tests/production-browser.mjs`: 14 authenticated read-only production checks PASS; secure operator credentials supplied only through environment.
 - Live Groq assessment: PASS, one exact grounded quote, 264 input / 159 output tokens in recorded successful call. Supplied key was not installed into production.
 - `npm audit`: zero vulnerabilities. Historical v0.2 production rollback + restore: PASS, no schema downgrade or history deletion.
