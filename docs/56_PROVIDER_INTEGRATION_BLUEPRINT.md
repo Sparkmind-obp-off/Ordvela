@@ -1,114 +1,92 @@
 # ORDVELA — External Provider Integration Blueprint
 
-## Implementation status — 2026-10-08
-IMPLEMENTED: registry, lifecycle/health/enable/disable/rotation/revocation, provider checklist UI, normalized contracts, attributed usage, non-executing scaffold generator and selected HN/GitHub/Groq/Threads/Facebook/Instagram adapters. Generator currently accepts technical identity/family, official docs URL, auth and credential field names; endpoint/pagination/webhook implementations are NOT autonomously inferred. Its six files retain DOCUMENTATION_REQUIRED until reviewed integration work. Broader generator input/output below is target architecture, not a claim that vendor implementations are generated or verified. Groq live assessment passed but production activation requires rotated key. FIN v0.3 adds bounded header-auth Meta reads, published-only Page evidence, provider-specific configuration/collection UI and separate demand qualification. Latest token candidates were supplied and tested: Facebook identities accessible but four Page feeds PERMISSION blocked; Threads AUTH_ERROR; no linked IG User ID returned. This is not live Meta ingestion success. Public HN/GitHub credential regression repaired. See 59_FIN_META_IMPLEMENTATION.md for exact live/fixture distinctions and 58_PROVIDER_PRODUCTION_VERIFICATION.md for release verification.
+Status: CANONICAL / UPDATED 2026-10-08
+Scope: direct providers + Apify acquisition bridge
 
-## Purpose
+## 1. Core rule
 
-Define one canonical integration contract before real API credentials are supplied.
+ORDVELA Intelligence is provider-independent. Providers are adapters behind stable internal contracts. Vendor-specific request formats, Actor schemas, credentials and response objects must not leak into the core Opportunity model.
 
-The implementation must be provider-independent. Providers are adapters behind stable internal contracts; the intelligence and opportunity model must not know vendor-specific request formats.
+**Apify is an acquisition provider/bridge. It is not the Ordvela intelligence layer.**
 
-## Provider Families
+## 2. Provider families
 
-### Demand / Discovery
-Web/search, Reddit, X, Threads, Facebook/Instagram where official access permits, Hacker News, GitHub, YouTube, Discord, Mastodon, forums/RSS, jobs/freelance sources and justified external data providers.
+Demand/Discovery: Web/search, Reddit, X, Threads, Facebook/Instagram where access permits, Hacker News, GitHub, YouTube, Discord, Mastodon, RSS/forums, jobs/freelance sources and justified external providers.
 
-This family includes the canonical Community & Demand Discovery capability. A community provider may expose search, feed, discussion, comment, channel or community metadata depending on its official API contract. ORDVela never assumes that platform-wide community search exists just because the platform has communities.
+Acquisition infrastructure: Apify Actors and other licensed/commercial acquisition services.
 
-### Intelligence / AI
-OpenAI, Groq, and other compatible LLM providers.
+Intelligence/AI: OpenAI, Groq and compatible LLM providers.
 
-### Execution / Deployment
-Cloudflare Pages/Workers and other justified deployment adapters.
+Execution/Deployment: Cloudflare Pages/Workers and justified deployment adapters.
 
-### Distribution
-Email, WhatsApp or other messaging providers only through approved official APIs.
+Distribution: Email, WhatsApp and other approved official messaging APIs.
 
-## Canonical Adapter Interface
+## 3. Canonical adapter interface
 
-Every adapter exposes:
-- providerId
-- providerVersion
-- capabilities
-- authType
-- requiredCredentials
-- configure()
-- validateCredentials()
-- healthCheck()
-- fetch()
-- normalize()
-- getUsage()
-- revoke()
+Every provider adapter should expose: providerId, providerVersion, capabilities, authType, requiredCredentials, configure(), validateCredentials(), healthCheck(), fetch(), normalize(), getUsage(), revoke().
 
-Provider-specific fields stay inside the adapter.
+For Apify, fetch() represents a bounded Actor run and result retrieval. Actor-specific input/output mapping stays inside the Apify adapter.
 
-## Normalized Source Contract
+## 4. Normalized evidence contract
 
-Every discovered item normalizes to:
-source, provider, externalId, canonicalUrl, authorRef, publishedAt, retrievedAt, title, body, language, engagement, metadata, evidence, rawReference, contentHash.
+Every discovered item normalizes to: source, provider, externalId, canonicalUrl, authorRef, publishedAt, retrievedAt, title, body, language, engagement, metadata, evidence, rawReference, contentHash.
+
+Apify-originated evidence additionally preserves actorId, actorVersion when relevant, runId, datasetId when applicable, inputFingerprint, estimatedCost when available and terms/licensing references.
 
 No provider-specific object may leak into the core Opportunity model.
 
-## Credential Contract
+## 5. Apify credential contract
 
-The UI shows what the operator needs but never displays stored secret values.
+Runtime credential: **APIFY_API_TOKEN**.
 
-Credential metadata includes provider, credential name/type, required/optional status, official setup instructions, scopes, environment, configured status, last validation, last error class and rotation/revocation status.
+Storage: server-side only; Cloudflare Worker secret / encrypted server configuration; never browser-side; never source-controlled; never logged.
 
-Secrets are server-side only, encrypted at rest, never returned by status endpoints, never logged, never committed and never embedded in client bundles.
+Recommended production posture: scoped token where feasible; resource-limited access; separate token per service/workspace integration when practical; rotation/revocation supported.
 
-## Provider Generator
+**Apify MCP credential ≠ Ordvela runtime API token.** MCP is for the connected operator/assistant. Ordvela production runtime authenticates directly to Apify with its server-side token.
 
-The Provider Generator accepts:
-- provider name/family
-- official API base URL and documentation URL
-- auth method
-- credential fields
-- scopes
-- endpoints
-- pagination model
-- rate limits
-- webhook/event model
-- sample response schema
+## 6. Actor Registry
 
-It outputs:
-- adapter scaffold
-- credential schema
-- health-check implementation
-- validation implementation
-- normalized mapper
-- usage metadata
-- error mapping
-- test fixtures
-- documentation entry
-- capability manifest
+Do not hard-code Actor IDs throughout business logic. Use logical capability → source → Actor ID → schema → pricing → permission/security → status.
 
-The generator must not invent undocumented endpoints or permissions.
+Logical slots include threads-search, reddit-search, youtube-comments, tiktok-comments, instagram-posts, facebook-posts, x-search and google-search. These are logical slots, not claims that every Actor is currently validated.
 
-## Lifecycle
+## 7. Apify execution contract
 
-DISCOVER → CONFIGURE → VALIDATE → ENABLE → RUN → OBSERVE → ROTATE/DISABLE
+**Ordvela request → Apify Adapter → Actor input validation → bounded Actor run → run status → dataset/result retrieval → raw evidence → normalization → deduplication → demand intelligence**
 
-A provider cannot become ENABLED unless validation succeeds.
+The adapter must validate capability, resolve Actor, validate known input schema, apply item/time/spend bounds, persist a job, run the Actor, observe completion/failure, retrieve output, attach provenance, normalize evidence, record usage/cost metadata and surface failures without fabricating data.
 
-## Safety
+## 8. Security gate
 
-Use only official APIs, permitted public feeds or explicitly authorized integrations. No credential scraping, session-cookie theft, CAPTCHA bypass or restriction bypass.
+Before enabling an Actor: inspect identity/author, permission/security requirements, input/output schema, pricing, coverage, platform/terms constraints and login/session requirements; prefer limited-permission Actors; test with a minimal bounded run; retain evidence supporting enablement.
 
-If official access is unavailable, mark the provider UNAVAILABLE rather than inventing a workaround.
+No full-scale run should occur merely because an Actor exists.
 
-V0: HN + GitHub already proven.
-V1: production D1, runtime secrets and deployment.
-V2: provider framework and selected high-value providers.
+## 9. Cost policy
 
+Minimum controls: max items, max run duration where supported, max spend/charge ceiling where supported, per-workspace usage event, provider attribution, Actor attribution, run-level cost metadata and alert/disable threshold.
 
-## Community & Demand Discovery Provider Policy
+Scale only after signal validation.
 
-Preferred rollout: Reddit → YouTube → Discord → RSS/forums → Mastodon/other official sources → X when economics justify → Meta recovery when access is available → external aggregators when coverage economics justify.
+## 10. Failure normalization
 
-External community/social-data providers are adapters, not ORDVela core. Their output must normalize into the existing evidence contract and preserve provenance, source URL where available, freshness, cost model, attribution requirements, retention/deletion constraints and known coverage gaps.
+authentication → AUTH_ERROR; permission → BLOCKED_PERMISSION; rate limit → RATE_LIMITED; timeout/unavailable → UNAVAILABLE; invalid Actor/input → VALIDATION_ERROR; provider degradation → DEGRADED.
 
-No provider may be used to bypass a platform restriction, authentication boundary, CAPTCHA, privacy control or other access control.
+A provider failure must not corrupt existing opportunities or block other providers.
 
-Provider value is measured by coverage, freshness, qualified-demand rate, opportunity rate, revenue conversion, latency, cost and reliability.
+## 11. Direct API vs Apify
+
+Prefer direct official API when access is available, capability is sufficient, terms permit intended use, economics are sensible and reliability is acceptable.
+
+Prefer Apify when direct access is blocked/unavailable and the Actor provides a permitted, useful, bounded and economically sensible acquisition path.
+
+Use both where complementary. Never make Apify an irreversible system dependency.
+
+## 12. V0 safety boundary
+
+Acquisition is read-only. No autonomous posting, commenting, replying, liking, following, DM or mass outreach. The system discovers and analyzes demand; humans decide what to do.
+
+## 13. Definition of done
+
+Apify integration is complete only when credentials are securely configured, Actor Registry exists, bounded execution works, raw output and provenance are preserved, normalized evidence is produced, duplicate handling works, demand extraction works, failures are observable, cost/usage is recorded and opportunity scoring consumes normalized evidence.
