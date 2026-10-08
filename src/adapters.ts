@@ -50,11 +50,41 @@ export class OpenAIAdapter implements LLMAdapter {
   async validate(key:string) { const d=await providerJSON('https://api.openai.com/v1/models',{headers:{Authorization:`Bearer ${key}`}}); if(!Array.isArray(d.data)) throw new Fault('PROVIDER','Respons OpenAI tidak valid',502) }
 }
 export type NormalizedEvidence = Evidence & {source:string;externalId:string;canonicalUrl:string;authorRef:string;publishedAt:string;retrievedAt:string;title:string;body:string;language:string;engagement:Record<string,unknown>;evidence:{text:string;provenance:string};rawReference:string;contentHash:string}
+export function normalizeEvidenceSync(e:Evidence):NormalizedEvidence { throw new Error('use async normalizeEvidence') }
 export async function normalizeEvidence(e:Evidence):Promise<NormalizedEvidence> {
   if(!e.external_id||!e.provider||!e.raw_text||e.raw_text.length>20000)throw new Fault('PROVIDER','Source record tidak lengkap atau terlalu besar',502)
   const url=new URL(e.url)
   if(url.protocol!=='https:'||url.username||url.password)throw new Fault('PROVIDER','Canonical evidence URL tidak aman',502)
   return {...e,source:e.provider,externalId:e.external_id,canonicalUrl:e.url,authorRef:e.author,publishedAt:e.published_at,retrievedAt:new Date().toISOString(),title:normalize(e.raw_text.split('\n')[0]).slice(0,200),body:normalize(e.raw_text),language:'unknown',engagement:{},evidence:{text:e.raw_text,provenance:e.url},rawReference:e.url,contentHash:await digest(normalize(e.raw_text).toLowerCase())}
+}
+export class FacebookSource implements SourceAdapter {
+  constructor(private token:string, private pageId:string){}
+  async collect(input:any):Promise<Evidence[]> {
+    if(!this.token || !this.pageId) throw new Fault('CONFLICT','Facebook access token dan page_id diperlukan',409)
+    const limit=Math.min(Number(input.limit||10),25)
+    const fields='id,message,permalink_url,created_time,from'
+    const d=await providerJSON(`https://graph.facebook.com/v24.0/${encodeURIComponent(this.pageId)}/feed?fields=${fields}&limit=${limit}&access_token=${encodeURIComponent(this.token)}`)
+    if(!Array.isArray(d.data)) throw new Fault('PROVIDER','Respons Facebook Page feed tidak valid',502)
+    return d.data.filter((r:any)=>typeof r.message==='string'&&r.message.trim()).map((r:any)=>{
+      const eid=String(r.id||''); if(!eid) throw new Fault('PROVIDER','Bukti Facebook tidak memiliki ID',502)
+      const url=typeof r.permalink_url==='string'&&r.permalink_url.startsWith('https://')?r.permalink_url:`https://www.facebook.com/${encodeURIComponent(eid)}`
+      return {external_id:`facebook:${eid}`,url,author:String(r.from?.name||this.pageId),published_at:String(r.created_time||''),raw_text:r.message.slice(0,20000),provider:'facebook',verified:true,metadata:{retrieved_from:'graph.facebook.com',page_id:this.pageId,evidence_type:'PAGE_FEED'}}
+    })
+  }
+}
+export class InstagramSource implements SourceAdapter {
+  constructor(private token:string, private userId:string){}
+  async collect(input:any):Promise<Evidence[]> {
+    if(!this.token || !this.userId) throw new Fault('CONFLICT','Instagram access token dan ig_user_id diperlukan',409)
+    const limit=Math.min(Number(input.limit||10),25)
+    const fields='id,caption,permalink,timestamp,username,media_type'
+    const d=await providerJSON(`https://graph.facebook.com/v24.0/${encodeURIComponent(this.userId)}/media?fields=${fields}&limit=${limit}&access_token=${encodeURIComponent(this.token)}`)
+    if(!Array.isArray(d.data)) throw new Fault('PROVIDER','Respons Instagram media tidak valid',502)
+    return d.data.filter((r:any)=>typeof r.caption==='string'&&r.caption.trim()).map((r:any)=>{
+      const eid=String(r.id||''); if(!eid||typeof r.permalink!=='string') throw new Fault('PROVIDER','Bukti Instagram tidak lengkap',502)
+      return {external_id:`instagram:${eid}`,url:r.permalink,author:String(r.username||this.userId),published_at:String(r.timestamp||''),raw_text:r.caption.slice(0,20000),provider:'instagram',verified:true,metadata:{retrieved_from:'graph.facebook.com',ig_user_id:this.userId,media_type:r.media_type||'UNKNOWN',evidence_type:'PROFESSIONAL_MEDIA'}}
+    })
+  }
 }
 export class ThreadsSource implements SourceAdapter {
   constructor(private token:string){}
