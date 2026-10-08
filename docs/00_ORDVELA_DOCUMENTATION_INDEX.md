@@ -1,0 +1,42 @@
+# ORDVELA — Documentation Index
+Status: CANONICAL
+Date: 2026-10-08
+
+## Purpose
+This directory is the operational source of truth for ORDVELA. It separates brand governance from the implementation of Ordvela Intelligence.
+
+## Canonical hierarchy
+1. Brand — ORDVELA
+2. Capability — Ordvela Intelligence
+3. Technical layers — Intelligence / Execution / Distribution
+4. Core loop — FIND → BUILD → SHOW → SELL
+5. Commercial outcome — REVENUE
+
+## Reading order
+- 01_SYSTEM_CHARTER
+- 02_PRODUCT_REQUIREMENTS
+- 21_REVENUE_LOOP_SYSTEM_ARCHITECTURE
+- 22_INTELLIGENCE_LAYER
+- 23_EXECUTION_LAYER
+- 24_DISTRIBUTION_LAYER
+- 25_OPPORTUNITY_DATA_MODEL
+- 26_PROVIDER_AND_BYOK_ARCHITECTURE
+- 27_COMMERCIAL_MODEL
+- 28_SECURITY_AND_TRUST
+- 29_REVENUE_LOOP_ROADMAP
+- 30_OPERATING_SOP
+- 31_IMPLEMENTATION_BASELINE
+- 32_V0_ACCEPTANCE_TESTS
+- 33_API_CONTRACTS
+- 34_SCORING_MODEL
+- 35_SOURCE_ADAPTER_SPEC
+- 36_EXECUTION_TEMPLATE_SPEC
+- 37_OBSERVABILITY_AND_AUDIT
+- 38_DEPLOYMENT_AND_OPERATIONS
+- 39_TEST_STRATEGY
+- 40_GOVERNANCE_AND_CHANGE_CONTROL
+- MASTER_ORDVELA_INTELLIGENCE_IMPLEMENTATION_PROMPT
+
+## Naming rule
+LOCK THE FUNCTION. FLEX THE NAME.
+No Hunter/Manhunter/MainHunter naming. No additional product brand or codename for V0.
