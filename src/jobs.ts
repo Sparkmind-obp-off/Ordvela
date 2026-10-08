@@ -1,5 +1,6 @@
+import { acquisitionStep, acquisitionFailure } from './acquisition'
 import { all, one, stmt, Env } from './db'
-import { id, now, Fault, normalize, digest, extractDemand, qualifyMetaDemand, SCORE_VERSION, buildArtifact, validateArtifact, retryDelay } from './core'
+import { id, now, Fault, normalize, digest, extractDemand, qualifyMetaDemand, qualifyAcquiredDemand, SCORE_VERSION, buildArtifact, validateArtifact, retryDelay } from './core'
 import { Evidence, GroqAdapter } from './adapters'
 import { collectFromProvider, requireEnabled, validateProvider, observeFailure, credential, manifest } from './providers'
 export async function enqueue(env:Env, w:string, actor:string, request:string, type:string, input:any, key:string) {
@@ -19,10 +20,10 @@ export async function ingest(env:Env, job:any, evidence:Evidence[]) {
     const prior=await one(env.DB,'SELECT s.id AS signal_id,o.id FROM signals s LEFT JOIN opportunities o ON o.signal_id=s.id WHERE s.workspace_id=? AND (s.external_id=? OR s.fingerprint=?)',job.workspace_id,e.external_id,fingerprint)
     if(prior) { duplicates++;if(prior.id)created.push(prior.id);details.push({signal_id:prior.signal_id,duplicate:true,opportunity_id:prior.id||null});continue }
     const s=id(),o=id(),score=extractDemand(e.raw_text,e.verified),time=now()
-    const gate=['facebook','instagram','threads'].includes(e.provider)?qualifyMetaDemand(e.raw_text):null
+    const gate=e.provider==='apify'?qualifyAcquiredDemand(e.raw_text):['facebook','instagram','threads'].includes(e.provider)?qualifyMetaDemand(e.raw_text):null
     const eligible=gate?gate.qualified:true
     const writes=[
-      stmt(env.DB,'INSERT OR IGNORE INTO signals (id,workspace_id,source_id,external_id,url,author,published_at,captured_at,raw_text,normalized_text,metadata,fingerprint) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',s,job.workspace_id,sourceId,e.external_id,e.url,e.author,e.published_at,time,e.raw_text,normalized,JSON.stringify({...e.metadata,...(gate?{demand_extraction:gate}:{}),normalized_contract:{source:e.provider,externalId:e.external_id,canonicalUrl:e.url,authorRef:e.author,publishedAt:e.published_at,retrievedAt:new Date(time).toISOString(),title:normalized.slice(0,200),language:'unknown',contentHash:fingerprint,rawReference:e.url}}),fingerprint),
+      stmt(env.DB,'INSERT OR IGNORE INTO signals (id,workspace_id,source_id,external_id,url,author,published_at,captured_at,raw_text,normalized_text,metadata,fingerprint) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',s,job.workspace_id,sourceId,e.external_id,e.url,e.author,e.published_at,time,e.raw_text,normalized,JSON.stringify({...e.metadata,...(gate?{demand_extraction:gate}:{}),normalized_contract:{source:String(e.metadata.source||e.provider),externalId:e.external_id,canonicalUrl:e.url,authorRef:e.author,publishedAt:e.published_at,retrievedAt:new Date(time).toISOString(),title:normalized.slice(0,200),language:'unknown',contentHash:fingerprint,rawReference:e.url}}),fingerprint),
       stmt(env.DB,`INSERT INTO opportunities (id,workspace_id,signal_id,title,problem,desired_outcome,intent,urgency,budget_signal,confidence,opportunity_score,recommended_action,status,created_at,updated_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,'NEW',?,? WHERE EXISTS (SELECT 1 FROM signals WHERE id=?) AND ?=1 AND (SELECT COUNT(*) FROM opportunities WHERE workspace_id=?)<500`,o,job.workspace_id,s,score.title,score.problem,score.desired_outcome,score.intent,score.urgency,score.budget_signal,score.confidence,score.total,score.recommended_action,time,time,s,eligible?1:0,job.workspace_id),
       stmt(env.DB,'INSERT INTO opportunity_scores (id,workspace_id,opportunity_id,version,components,total,created_at) SELECT ?,?,?,?,?,?,? WHERE EXISTS (SELECT 1 FROM opportunities WHERE id=?)',id(),job.workspace_id,o,SCORE_VERSION,JSON.stringify(score.components),score.total,time,o),
       stmt(env.DB,'INSERT INTO audit_events (id,workspace_id,actor_id,operation,target_id,request_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)',id(),job.workspace_id,job.actor_id,'signal.ingest',s,job.request_id,JSON.stringify({external_id:e.external_id,version:SCORE_VERSION,qualification:gate?.reason||'LEGACY_PUBLIC_SOURCE'}),time),
@@ -39,6 +40,7 @@ export async function ingest(env:Env, job:any, evidence:Evidence[]) {
 }
 async function perform(env:Env,job:any) {
   const input=JSON.parse(job.input)
+  if(job.type==='ACQUIRE'){await requireEnabled(env,job.workspace_id,'rules-v1.0');return acquisitionStep(env,job,ingest)}
   if(job.type==='INGEST') {await requireEnabled(env,job.workspace_id,'rules-v1.0');return ingest(env,job,await collectFromProvider(env,job.workspace_id,input))}
   if(job.type==='BUILD') {
     await requireEnabled(env,job.workspace_id,'template-build')
@@ -102,17 +104,19 @@ export async function runJobs(env:Env,w:string) {
     if(!claim.meta.changes) continue
     job.attempts++
     try {
-      const result=await perform(env,job)
+      const result:any=await perform(env,job)
+      if(result.deferred){if(job.attempts>=job.max_attempts)throw new Fault('TIMEOUT','Acquisition polling bound reached; inspect external run, no new Actor start',504,false);await stmt(env.DB,"UPDATE jobs SET status='QUEUED',next_run_at=?,lease_until=NULL,error_code=NULL,error_message=NULL WHERE id=? AND status='RUNNING'",now()+result.delay_ms,job.id).run();continue}
       await env.DB.batch([
-        stmt(env.DB,"UPDATE jobs SET status='SUCCEEDED',result=?,finished_at=?,error_code=NULL,error_message=NULL WHERE id=? AND status='RUNNING'",JSON.stringify(result),now(),job.id),
-        stmt(env.DB,'INSERT INTO usage_events (id,workspace_id,provider,operation,units,estimated_cost,job_id,created_at) VALUES (?,?,?,?,?,NULL,?,?)',id(),w,job.type==='INGEST'||job.type==='ASSESS'?JSON.parse(job.input).provider:['PROVIDER_VALIDATE','PROVIDER_HEALTH'].includes(job.type)?JSON.parse(job.input).provider_kind:'deterministic-template',job.type,1,job.id,now()),
+        stmt(env.DB,"UPDATE jobs SET status=?,result=?,finished_at=?,error_code=NULL,error_message=NULL WHERE id=? AND status='RUNNING'",result.cancelled?'CANCELLED':'SUCCEEDED',JSON.stringify(result),now(),job.id),
+        stmt(env.DB,'INSERT INTO usage_events (id,workspace_id,provider,operation,units,estimated_cost,job_id,created_at) VALUES (?,?,?,?,?,NULL,?,?)',id(),w,job.type==='INGEST'||job.type==='ASSESS'||job.type==='ACQUIRE'?JSON.parse(job.input).provider:['PROVIDER_VALIDATE','PROVIDER_HEALTH'].includes(job.type)?JSON.parse(job.input).provider_kind:'deterministic-template',job.type,1,job.id,now()),
         stmt(env.DB,'INSERT INTO audit_events (id,workspace_id,actor_id,operation,target_id,request_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)',id(),w,job.actor_id,`job.${job.type.toLowerCase()}`,job.id,job.request_id,JSON.stringify({status:'SUCCEEDED'}),now())
       ])
     } catch(error) {
       const e=error instanceof Fault?error:new Fault('INTERNAL','Job gagal; periksa konfigurasi dan retry',500,false)
       const input=JSON.parse(job.input)
-      if((job.type==='INGEST'||job.type==='ASSESS')&&e.code!=='CONFLICT')await observeFailure(env,w,input.provider,e)
+      if((job.type==='INGEST'||job.type==='ASSESS'||job.type==='ACQUIRE')&&e.code!=='CONFLICT')await observeFailure(env,w,input.provider,e)
       const retry=e.retryable && job.attempts<job.max_attempts
+      if(job.type==='ACQUIRE'&&!retry)await acquisitionFailure(env,job,e)
       await env.DB.batch([
         stmt(env.DB,'UPDATE jobs SET status=?,error_code=?,error_message=?,next_run_at=?,finished_at=? WHERE id=? AND status=\'RUNNING\'',retry?'QUEUED':'FAILED',e.code,e.message,now()+retryDelay(job.attempts),retry?null:now(),job.id),
         stmt(env.DB,'INSERT INTO audit_events (id,workspace_id,actor_id,operation,target_id,request_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)',id(),w,job.actor_id,'job.failed',job.id,job.request_id,JSON.stringify({code:e.code,retrying:retry}),now())

@@ -37,6 +37,17 @@ export function qualifyMetaDemand(raw:string) {
   const qualified=!!request&&!!software&&!excluded
   return {version:'meta-demand-gate-v1',qualified,classification:qualified?'DEMAND_HYPOTHESIS_REQUIRES_HUMAN_REVIEW':'NO_QUALIFIED_DEMAND',reason:excluded?'PROMOTION_OR_NEGATED_REQUEST':!request?'NO_EXPLICIT_REQUEST':!software?'NO_SUPPORTED_SOLUTION_CONTEXT':'EXPLICIT_REQUEST_AND_SUPPORTED_CONTEXT',evidence_quotes:qualified?[request![0],software![0]]:[],score_modified:false}
 }
+// Acquisition uses the same FIN gate plus explicit recommendation/vendor questions.
+// This is a hypothesis classification, not a replacement for rules-v1.0 scoring.
+export function qualifyAcquiredDemand(raw:string) {
+  const t=normalize(raw),base=qualifyMetaDemand(raw)
+  const extra=t.match(/\b(?:where can i|how much|can someone build|any alternatives? to|wish there was|looking to hire|vendor search)\b/i)
+  const context=t.match(/\b(?:software|tools?|apps?|automation|workflow|dashboard|systems?|website|api|aplikasi|sistem)\b/i)
+  const qualified=base.qualified||!!extra&&!!context&&base.reason!=='PROMOTION_OR_NEGATED_REQUEST'
+  const commercial=/\b(?:hire|buy|paid|paying|budget|willing to pay|purchase|how much|vendor)\b/i.test(t)
+  const category=qualified?(commercial?'COMMERCIAL_INTENT_HYPOTHESIS':'QUALIFIED_DEMAND_HYPOTHESIS'):/\b(?:broken|problem|pain|failed|frustrated)\b/i.test(t)?'PROBLEM_SIGNAL':/\b(?:interested|curious|interest)\b/i.test(t)?'INTEREST':extra?'WEAK_SIGNAL':'DISCUSSION'
+  return {...base,version:'acquisition-demand-gate-v1',qualified,category,classification:qualified?'DEMAND_HYPOTHESIS_REQUIRES_HUMAN_REVIEW':'NO_QUALIFIED_DEMAND',reason:base.qualified?base.reason:qualified?'EXPLICIT_QUESTION_AND_SUPPORTED_CONTEXT':base.reason,evidence_quotes:base.qualified?base.evidence_quotes:qualified?[extra![0],context![0]]:[],score_modified:false}
+}
 export const TEMPLATES = ['intake','calculator','workflow']
 export function blueprint(op: any, template: string, publicTitle: string, publicSummary: string) {
   choice(template,'template',TEMPLATES)

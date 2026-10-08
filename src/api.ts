@@ -1,3 +1,5 @@
+import { actorRegistry, configureActor, actorResource, reviewActor, acquisitionHistory, createAcquisition, cancelAcquisition } from './acquisition'
+import { ApifyAdapter, apifySecret } from './apify'
 import { Hono } from 'hono'
 import { App, authenticate, owner, memberships } from './auth'
 import { all,one,stmt } from './db'
@@ -32,6 +34,8 @@ api.post('/workspaces/current/archive',async c=>{
   owner(c);const b=await body(c);confirm(b.confirm)
   const workspace=await one(c.env.DB,'SELECT name FROM workspaces WHERE id=? AND deleted_at IS NULL',w(c))
   if(!workspace||b.workspace_name!==workspace.name)throw new Fault('VALIDATION','Ketik nama workspace persis untuk archive')
+  const activeAcquisition=await one(c.env.DB,"SELECT COUNT(*) n FROM acquisition_jobs WHERE workspace_id=? AND phase IN ('PREPARED','STARTING','RUNNING','RETRIEVING','UNKNOWN')",w(c))
+  if(activeAcquisition.n)throw new Fault('CONFLICT','Cancel/resolve external acquisition sebelum archive; unknown spend tetap perlu audit',409)
   await c.env.DB.batch([
     stmt(c.env.DB,'UPDATE workspaces SET deleted_at=? WHERE id=? AND deleted_at IS NULL',now(),w(c)),
     stmt(c.env.DB,'INSERT INTO audit_events (id,workspace_id,actor_id,operation,target_id,request_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)',id(),w(c),c.get('user').id,'workspace.archived',w(c),c.get('requestId'),'soft archive; history retained',now()),
@@ -223,13 +227,14 @@ api.post('/jobs/:id/retry',async c=>{
 })
 api.post('/jobs/:id/cancel',async c=>{
   const j=await get(c,'jobs',c.req.param('id'))
+  if(j.type==='ACQUIRE'){owner(c);confirm((await body(c)).confirm);const result=await cancelAcquisition(c.env,w(c),j.id);await audit(c,'acquisition.cancel-requested',j.id);c.executionCtx.waitUntil(runJobs(c.env,w(c)));return ok(c,result)}
   if(j.status!=='QUEUED') throw new Fault('CONFLICT','Hanya job QUEUED yang dapat dibatalkan dengan aman',409)
   await stmt(c.env.DB,"UPDATE jobs SET status='CANCELLED',finished_at=? WHERE id=? AND workspace_id=? AND status='QUEUED'",now(),j.id,w(c)).run()
   await audit(c,'job.cancelled',j.id);return ok(c,{status:'CANCELLED'})
 })
 api.get('/providers',async c=>{
   const registry=await registryStatus(c.env,w(c))
-  return ok(c,{encryption_configured:!!c.env.CREDENTIAL_MASTER_KEY,registry,builtin:registry.filter(p=>!p.credential_fields.length&&p.implementation!=='PLANNED').map(p=>({kind:p.id,status:p.status,mode:p.setup})),configured:registry.filter(p=>p.configured&&p.credential_fields.length).map(p=>({id:p.resource_id,kind:p.id,status:p.status,updated_at:p.last_validation}))})
+  return ok(c,{encryption_configured:!!c.env.CREDENTIAL_MASTER_KEY,registry,builtin:registry.filter(p=>!p.credential_fields.length&&p.auth_type!=='RUNTIME_SECRET'&&p.implementation!=='PLANNED').map(p=>({kind:p.id,status:p.status,mode:p.setup})),configured:registry.filter(p=>p.configured&&p.credential_fields.length).map(p=>({id:p.resource_id,kind:p.id,status:p.status,updated_at:p.last_validation}))})
 })
 api.post('/providers',async c=>{
   owner(c);const b=await body(c);confirm(b.confirm)
@@ -248,7 +253,7 @@ async function providerResource(c:any,rid:string) {
   if(m.implementation==='PLANNED')throw new Fault('CONFLICT','DOCUMENTATION_REQUIRED: belum ada adapter aktif',409)
   const pid=`${w(c)}:${kind}`
   let p=await one(c.env.DB,'SELECT * FROM providers WHERE id=? AND workspace_id=?',pid,w(c))
-  if(!p){const publicBuiltin=!m.credential_fields.length;await stmt(c.env.DB,"INSERT OR IGNORE INTO providers (id,workspace_id,kind,status,updated_at,enabled,version) VALUES (?,?,?,?,?,?,?)",pid,w(c),kind,publicBuiltin?'ENABLED':'NOT_CONFIGURED',now(),publicBuiltin?1:0,m.version).run();p=await get(c,'providers',pid)}
+  if(!p){const publicBuiltin=!m.credential_fields.length&&kind!=='apify';await stmt(c.env.DB,"INSERT OR IGNORE INTO providers (id,workspace_id,kind,status,updated_at,enabled,version) VALUES (?,?,?,?,?,?,?)",pid,w(c),kind,publicBuiltin?'ENABLED':kind==='apify'&&c.env.APIFY_API_TOKEN?'CONFIGURED':'NOT_CONFIGURED',now(),publicBuiltin?1:0,m.version).run();p=await get(c,'providers',pid)}
   return p
 }
 async function providerCheck(c:any,type:string) {
@@ -289,6 +294,22 @@ api.post('/provider-generator',async c=>{
   await audit(c,'provider.scaffold-generated',gid,{provider:generated.definition.provider_id,status:generated.status})
   return ok(c,{id:gid,...generated},201)
 })
+// Acquisition uses the existing auth/provider/job system; no runtime credential endpoint.
+async function metadataLimit(c:any) {
+ const n=await one(c.env.DB,"SELECT COUNT(*) n FROM audit_events WHERE workspace_id=? AND operation LIKE 'apify.metadata%' AND created_at>?",w(c),now()-3600000)
+ if(n.n>=30)throw new Fault('RATE_LIMIT','Batas 30 Apify metadata requests/jam/workspace',429)
+ await audit(c,'apify.metadata-request',w(c))
+}
+api.get('/acquisitions/actors',async c=>ok(c,{runtime_configured:!!c.env.APIFY_API_TOKEN,slots:await actorRegistry(c.env,w(c)),budgets:{max_job_usd:1,workspace_daily_reserved_usd:1,runtime_daily_reserved_usd:2,max_active_jobs:2,scope:'PPE Actor charge ceiling, platform fees may be additional'},paid_execution_authorized:false}))
+api.get('/acquisitions/discover',async c=>{owner(c);await metadataLimit(c);return ok(c,await new ApifyAdapter(apifySecret(c.env)).discoverActor(c.req.query('q')||'youtube comments'))})
+api.post('/acquisitions/actors',async c=>{owner(c);const b=await body(c);confirm(b.confirm);if(Object.keys(b).some(k=>!['capability','actor_id','profile','confirm'].includes(k)))throw new Fault('VALIDATION','Actor metadata only; arbitrary input/credentials tidak diterima');await metadataLimit(c);const r=await configureActor(c.env,w(c),c.get('user').id,b);await audit(c,'apify.actor-configured',r.id,{revision:r.revision});return ok(c,r,201)})
+api.post('/acquisitions/actors/:id/review',async c=>{owner(c);const b=await body(c),r=await reviewActor(c.env,w(c),c.get('user').id,c.req.param('id'),b);await audit(c,'apify.actor-terms-reviewed',c.req.param('id'));return ok(c,r)})
+api.post('/acquisitions/actors/:id/enable',async c=>{owner(c);confirm((await body(c)).confirm);const r=await actorResource(c.env,w(c),c.req.param('id'));if(!r.reviewed_at||!r.run_validated_at||!['RUN_VALIDATED','ENABLED'].includes(r.status))throw new Fault('CONFLICT','Bounded live run/output harus tervalidasi sebelum enable Actor',409);await stmt(c.env.DB,"UPDATE actor_registry SET enabled=1,status='ENABLED',revision=? WHERE id=? AND revision=?",now(),r.id,r.revision).run();await audit(c,'apify.actor-enabled',r.id);return ok(c,{enabled:true,status:'ENABLED'})})
+api.post('/acquisitions/actors/:id/disable',async c=>{owner(c);confirm((await body(c)).confirm);const r=await actorResource(c.env,w(c),c.req.param('id'));await stmt(c.env.DB,"UPDATE actor_registry SET enabled=0,status='DISABLED',revision=? WHERE id=?",now(),r.id).run();await audit(c,'apify.actor-disabled',r.id);return ok(c,{enabled:false,status:'DISABLED'})})
+api.get('/acquisitions',async c=>{c.executionCtx.waitUntil(runJobs(c.env,w(c)));return ok(c,{history:await acquisitionHistory(c.env,w(c)),yield:await all(c.env.DB,'SELECT source,COUNT(*) acquisitions,SUM(result_count) evidence,SUM(opportunity_count) opportunities,SUM(actual_usage_usd) observed_cost_usd,SUM(reserved_usd) reserved_usd FROM acquisition_jobs WHERE workspace_id=? GROUP BY source',w(c))})})
+api.post('/acquisitions',async c=>{owner(c);await requireEnabled(c.env,w(c),'apify');const r=await createAcquisition(c.env,w(c),c.get('user').id,c.get('requestId'),await body(c));c.executionCtx.waitUntil(runJobs(c.env,w(c)));return ok(c,r,202)})
+api.post('/acquisitions/:id/cancel',async c=>{owner(c);confirm((await body(c)).confirm);const r=await cancelAcquisition(c.env,w(c),c.req.param('id'));await audit(c,'acquisition.cancel-requested',c.req.param('id'));c.executionCtx.waitUntil(runJobs(c.env,w(c)));return ok(c,r)})
+api.get('/acquisitions/:id/evidence',async c=>{const a=await one(c.env.DB,'SELECT job_id FROM acquisition_jobs WHERE job_id=? AND workspace_id=?',c.req.param('id'),w(c));if(!a)throw new Fault('NOT_FOUND','Acquisition tidak ditemukan',404);return ok(c,await all(c.env.DB,'SELECT s.*,x.row_index FROM acquisition_signals x JOIN signals s ON s.id=x.signal_id WHERE x.job_id=? AND s.workspace_id=? ORDER BY x.row_index',a.job_id,w(c)))})
 api.get('/provider-generator',async c=>ok(c,await all(c.env.DB,'SELECT id,provider_id,status,checksum,created_at FROM provider_scaffolds WHERE workspace_id=? ORDER BY created_at DESC LIMIT 50',w(c))))
 api.get('/provider-generator/:id',async c=>ok(c,await get(c,'provider_scaffolds',c.req.param('id'))))
 api.get('/usage',async c=>ok(c,await all(c.env.DB,'SELECT provider,operation,SUM(units) units,COUNT(*) events FROM usage_events WHERE workspace_id=? GROUP BY provider,operation',w(c))))
