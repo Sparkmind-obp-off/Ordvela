@@ -48,7 +48,7 @@ export function profileInput(profile:string,b:Bounds) {
   const p=INPUT_PROFILES[profile];if(!p)throw new Fault('CONFLICT','Profil input/output belum diimplementasikan untuk capability ini',409)
   return p.input(b)
 }
-export type ActorInspection={actor_id:string;actor_name:string;title:string;build_id:string;actor_version:string;profile:string;schema_summary:any;schema_hash:string;review_hash:string;pricing:any;pricing_observed_at:number;permission_status:string;security_status:string;validation_status:string;terms_reference:string;output_mapping:string}
+export type ActorInspection={actor_id:string;actor_name:string;title:string;build_id:string;actor_version:string;profile:string;schema_summary:any;schema_hash:string;review_hash:string;pricing:any;pricing_observed_at:number;permission_status:string;security_status:string;validation_status:string;terms_reference:string;output_mapping:string;minimum_memory_mb:number;configured_memory_mb:number;validation_blockers:string[]}
 export function estimateActorCharge(a:ActorInspection,maxItems:number):number|null {
  if(a.profile!=='youtube-comments-v1'||a.pricing.model!=='PAY_PER_EVENT')return null
  const events=a.pricing.events||{},values=Object.values(events) as any[]
@@ -92,9 +92,11 @@ export class ApifyAdapter {
     const permission=a.actorPermissionLevel==='LIMITED_PERMISSIONS'?'LIMITED_PERMISSIONS':'REVIEW_REQUIRED'
     const supported=!!p&&p.fields.every(f=>f in schema.properties)&&schema.properties.startUrls?.type==='array'&&schema.properties.maxComments?.type==='integer'&&schema.properties.sortCommentsBy?.enum?.includes('NEWEST_FIRST')&&schema.properties.oldestCommentDate?.type==='string'&&(b.actorDefinition?.minMemoryMbytes??256)<=256&&(schema.required||[]).every((f:string)=>p.fields.includes(f))
     const security=concern?'BLOCKED_COMPLIANCE':permission!=='LIMITED_PERMISSIONS'?'BLOCKED_PERMISSIONS':'TERMS_REVIEW_REQUIRED'
+    const minimum_memory_mb=b.actorDefinition?.minMemoryMbytes??256
+    const validation_blockers=[...(!p?['INPUT_OUTPUT_PROFILE_NOT_IMPLEMENTED']:[]),...(p&&!supported?['PROFILE_SCHEMA_OR_RESOURCE_INCOMPATIBLE']:[]),...(minimum_memory_mb>256?[`MINIMUM_MEMORY_${minimum_memory_mb}_MB_EXCEEDS_256_MB_BOUND`]:[]),...(security!=='TERMS_REVIEW_REQUIRED'?[security]:[]),...(pricing.model!=='PAY_PER_EVENT'?['PPE_CHARGE_CEILING_NOT_SUPPORTED']:[])]
     const actor_version=safeMetadata(b.buildNumber,50)
     const review_hash=await digest(JSON.stringify({actor:a.id,build:buildId,schema_hash,pricing,permission,security,profile}))
-    return {actor_id:apifyId(a.id),actor_name:safeMetadata(a.username)+'~'+safeMetadata(a.name),title:safeMetadata(a.title||a.name),build_id:buildId,actor_version,profile,schema_summary,schema_hash,review_hash,pricing,pricing_observed_at:now(),permission_status:permission,security_status:security,validation_status:supported&&security==='TERMS_REVIEW_REQUIRED'&&pricing.model==='PAY_PER_EVENT'?'SCHEMA_CHECKED_RUN_UNVALIDATED':'DOCUMENTATION_REQUIRED',terms_reference:'https://apify.com/'+encodeURIComponent(a.username)+'/'+encodeURIComponent(a.name),output_mapping:p?.mapping||'MAPPING_NOT_IMPLEMENTED'}
+    return {actor_id:apifyId(a.id),actor_name:safeMetadata(a.username)+'~'+safeMetadata(a.name),title:safeMetadata(a.title||a.name),build_id:buildId,actor_version,profile,schema_summary,schema_hash,review_hash,pricing,pricing_observed_at:now(),permission_status:permission,security_status:security,validation_status:supported&&security==='TERMS_REVIEW_REQUIRED'&&pricing.model==='PAY_PER_EVENT'?'SCHEMA_CHECKED_RUN_UNVALIDATED':'DOCUMENTATION_REQUIRED',terms_reference:'https://apify.com/'+encodeURIComponent(a.username)+'/'+encodeURIComponent(a.name),output_mapping:p?.mapping||'MAPPING_NOT_IMPLEMENTED',minimum_memory_mb,configured_memory_mb:256,validation_blockers}
   }
   async startRun(a:ActorInspection,b:Bounds,input:Record<string,unknown>) {
     if(a.pricing.model!=='PAY_PER_EVENT'||b.max_charge_usd<a.pricing.minimum_charge_ceiling_usd)throw new Fault('CONFLICT','Actor pricing tidak mendukung charge ceiling ini',409)
