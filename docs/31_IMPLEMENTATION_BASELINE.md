@@ -33,3 +33,17 @@ Meta live discovery blocked by the observed token/permission/asset conditions. G
 ## Identity and non-negotiables
 ORDVELA only master brand; Ordvela Intelligence capability. LOCK THE FUNCTION. FLEX THE NAME.
 External contact = NO. Posting/reply/DM = NO. Secret committed = NO (tracked files/dist scan PASS).
+
+
+## Community & Demand Discovery expansion baseline
+
+Community discovery is now a first-class Intelligence capability while providers remain replaceable. Current Meta adapters remain implemented but live access is blocked by observed authorization conditions. This is an access-state, not an architecture failure.
+
+Next provider work is deliberately outside the Meta critical path:
+**Reddit → YouTube → Discord → RSS/forums → additional official sources → X/paid sources by ROI → external aggregators by ROI.**
+
+External aggregators may supply evidence only through normalized adapters and must preserve provenance, cost, freshness and licensing/terms metadata. No adapter may bypass platform restrictions.
+
+## Meta status
+
+**SOFT-HOLD / ACCESS-RECOVERY OPTIONAL.** Keep existing adapters; attempt controlled recovery when valid credentials and permissions are available; do not repeatedly guess or force access. Production activation requires real validation and real evidence.
