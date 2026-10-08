@@ -57,12 +57,13 @@ api.delete('/members/:id',async c=>{
   await audit(c,'member.revoked',c.req.param('id'));return ok(c,{revoked:true})
 })
 api.post('/signals/ingest',async c=>{
-  const b=await body(c),provider=choice(b.provider,'provider',['hacker-news','github-issues','threads'])
+  const b=await body(c),provider=choice(b.provider,'provider',['hacker-news','github-issues','threads','facebook','instagram'])
   await requireEnabled(c.env,w(c),provider)
-  const input={provider,query:b.query?text(b.query,'query',150):undefined,reference:b.reference?text(b.reference,'reference',500):undefined}
+  const input={provider,query:b.query?text(b.query,'query',150):undefined,reference:b.reference?text(b.reference,'reference',500):undefined,limit:b.limit?Math.min(Math.max(Number(b.limit),1),25):undefined}
   if(!input.query && !input.reference) throw new Fault('VALIDATION','Query atau URL bukti diperlukan')
   if(provider==='github-issues' && !input.reference) throw new Fault('VALIDATION','URL issue diperlukan')
   if(provider==='threads' && !input.query) throw new Fault('VALIDATION','Threads memerlukan query keyword')
+  if((provider==='facebook'||provider==='instagram') && input.reference) throw new Fault('VALIDATION','Meta discovery menggunakan provider configuration; jangan kirim credential atau raw endpoint')
   const total=await one(c.env.DB,'SELECT COUNT(*) n FROM opportunities WHERE workspace_id=?',w(c))
   if(total.n>=500) throw new Fault('RATE_LIMIT','Batas V0: 500 opportunities per workspace',429)
   return job(c,'INGEST',input,text(b.idempotency_key || id(),'idempotency_key',160))
