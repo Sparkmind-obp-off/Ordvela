@@ -12,7 +12,9 @@ The implementation must be provider-independent. Providers are adapters behind s
 ## Provider Families
 
 ### Demand / Discovery
-Web/search, Reddit, X, Threads, Facebook/Instagram where official access permits, Hacker News, GitHub, and jobs/freelance sources.
+Web/search, Reddit, X, Threads, Facebook/Instagram where official access permits, Hacker News, GitHub, YouTube, Discord, Mastodon, forums/RSS, jobs/freelance sources and justified external data providers.
+
+This family includes the canonical Community & Demand Discovery capability. A community provider may expose search, feed, discussion, comment, channel or community metadata depending on its official API contract. ORDVela never assumes that platform-wide community search exists just because the platform has communities.
 
 ### Intelligence / AI
 OpenAI, Groq, and other compatible LLM providers.
@@ -99,3 +101,14 @@ If official access is unavailable, mark the provider UNAVAILABLE rather than inv
 V0: HN + GitHub already proven.
 V1: production D1, runtime secrets and deployment.
 V2: provider framework and selected high-value providers.
+
+
+## Community & Demand Discovery Provider Policy
+
+Preferred rollout: Reddit → YouTube → Discord → RSS/forums → Mastodon/other official sources → X when economics justify → Meta recovery when access is available → external aggregators when coverage economics justify.
+
+External community/social-data providers are adapters, not ORDVela core. Their output must normalize into the existing evidence contract and preserve provenance, source URL where available, freshness, cost model, attribution requirements, retention/deletion constraints and known coverage gaps.
+
+No provider may be used to bypass a platform restriction, authentication boundary, CAPTCHA, privacy control or other access control.
+
+Provider value is measured by coverage, freshness, qualified-demand rate, opportunity rate, revenue conversion, latency, cost and reliability.
