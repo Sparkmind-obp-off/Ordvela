@@ -1,7 +1,7 @@
 # ORDVELA INTELLIGENCE — Implementation Baseline
 Status: V0 IMPLEMENTED / V1 PRODUCTION VERIFIED / V2 PROVIDERS + FIN META
 Date: 2026-10-08
-Runtime increment: 0.3.0. Current FIN proof: `59_FIN_META_IMPLEMENTATION.md`; deployment results: `58_PROVIDER_PRODUCTION_VERIFICATION.md`.
+Runtime increment: 0.4.0. Apify runtime proof/status: `61_APIFY_ACQUISITION_ARCHITECTURE.md`. v0.3 observations below retained as historical Meta proof. Current FIN proof: `59_FIN_META_IMPLEMENTATION.md`; deployment results: `58_PROVIDER_PRODUCTION_VERIFICATION.md`.
 
 ## Repository audit
 Initial baseline `19c4341` was documentation only. Runtime `09702d8` delivered V0; `211a945` recorded the verified v0.2 provider release. Upstream Meta additions through `d0aa82e` were audited and preserved. The HN/GitHub unconditional-credential regression and incomplete Meta bounds/UI/qualification were fixed, not deployed unchanged. No repository/brand/domain/architecture replacement.
@@ -47,3 +47,10 @@ External aggregators may supply evidence only through normalized adapters and mu
 ## Meta status
 
 **SOFT-HOLD / ACCESS-RECOVERY OPTIONAL.** Keep existing adapters; attempt controlled recovery when valid credentials and permissions are available; do not repeatedly guess or force access. Production activation requires real validation and real evidence.
+
+## Apify implementation baseline — 0.4.0
+Upstream `e7294cb` audited; PLANNED Apify manifest promoted to ADAPTER backed by managed runtime secret. Added src/apify.ts, src/acquisition.ts, public/static/acquisition.js and migration 0003; reused existing provider/OWNER/workspace/jobs/signals/scoring/outcomes. No source/root secret copied into D1 or browser. Eight logical registry slots; one isolated executable YouTube-comments input/output profile. Other candidates metadata-only; Actor discovery is not production readiness.
+
+Bounds, reviewed schema/build/pricing hashes, explicit per-run spending authorization, atomic USD reservation gates, durable start-intent/UNKNOWN handling, async status/dataset retrieval, deterministic dedup and acquisition-to-signal receipts are implemented. Actor output validation/enabling needs actual bounded run output; no paid run authorized/performed by agent. Qualified acquisition evidence uses a separate transparent hypothesis gate, not a replacement score. Existing rules-v1.0 and Meta soft-hold preserved.
+
+Local v0.4 proof: build/typecheck PASS; 51 tests PASS; API regression 312 assertions PASS; browser 48 checks PASS. D1 backup and additive remote migration successful; Apify secret configured through stdin without echo. Production deployment/token/Actor metadata results appended to doc 61 after verification. No external contact/post/reply/DM.

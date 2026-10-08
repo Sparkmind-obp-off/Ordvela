@@ -4,7 +4,14 @@
 
 **V0 implemented. V1 live on Cloudflare BYOK. V2 provider operating layer implemented, selected live access still requires credentials/approval.** No replacement repository, master brand or custom domain.
 
-## FIN Meta v0.3 — actual state
+## Apify Acquisition Bridge v0.4
+Generic async Actor/run/dataset bridge, replaceable workspace Actor Registry, bounded paid confirmation, durable acquisition receipts, cost/usage history and existing demand-to-opportunity integration implemented. `APIFY_API_TOKEN` is a managed server secret, never an input/value in frontend or stored in D1. Latest supplied token identity validated read-only. No paid Actor run performed; no live Actor acquisition/opportunity proof claimed. Actor readiness is separate from application deployment. Details and gates: [Apify architecture / implementation](docs/61_APIFY_ACQUISITION_ARCHITECTURE.md).
+
+Open Settings → Provider Registry → Apify Validate / Enable (workspace access), then Apify Acquisition Bridge → select/inspect Actor → review terms/schema/pricing → explicitly authorize one bounded validation run. Only the YouTube Comments profile is executable; other slots are metadata-only until reviewed source mappings and tests exist. Never treat Apify as official Meta access or a bypass.
+
+Local checks: 51 tests, 312 API assertions, 48 browser checks, build/typecheck PASS. Production release verification pending final smoke; deployment section and doc 61 record actual results.
+
+## Historical FIN Meta v0.3 — actual state
 Bounded official read adapters, encrypted Facebook/Instagram/Threads configuration, provider-specific FIN modes and evidence review are implemented. New Meta posts must pass `meta-demand-gate-v1` before opportunity creation; non-demand signals remain inspectable. `rules-v1.0` and historical scores are unchanged. HN/GitHub public-source regression repaired.
 
 Latest supplied tokens were actually tested: three Facebook identity successes, all Threads token checks rejected with 190, four authorized Page feeds rejected with permission error 10, no linked Professional IG asset returned. Temporary encrypted local/isolated production QA credentials revoked; production QA archived. Real Meta evidence/opportunities/scores: **0/0/0**. Production Meta remains unconfigured/not enabled pending passing validation and explicit Page/workspace selection. Do not mistake fixture tests or app deployment for live Meta coverage. Full proof and operator steps: [report 59](docs/59_FIN_META_IMPLEMENTATION.md).
@@ -16,7 +23,7 @@ Local verification: build/typecheck PASS; 37 tests PASS; API 320 recorded assert
 - Health: https://ordvela.pages.dev/api/health
 - Repository: https://github.com/Sparkmind-obp-off/Ordvela — branch `main`.
 - Runtime: Hono + TypeScript + Cloudflare Pages + dedicated `ordvela-production` D1.
-- Migrations `0001_initial.sql` and `0002_provider_registry.sql` applied locally and remotely. Placeholder database UUID removed.
+- Migrations `0001_initial.sql`, `0002_provider_registry.sql`, `0003_apify_acquisition.sql` applied locally and remotely (additive Actor metadata/jobs/provenance). Placeholder database UUID removed.
 - Production `CREDENTIAL_MASTER_KEY` and `REGISTRATION_TOKEN` are managed server secrets, never repository variables. Public signup disabled; registration requires operator invitation. Sandbox can allow self-registration through ignored `.dev.vars`.
 - Health/auth/demo/golden-path production smoke passed. Compatible deployment rollback and restoration exercised successfully. This is a verified V1 release, not a claim of complete enterprise hardening or proven customer revenue.
 
@@ -43,6 +50,7 @@ Local verification: build/typecheck PASS; 37 tests PASS; API 320 recorded assert
 | Threads | Bounded keyword adapter tested; supplied candidates rejected by Threads (190), local AUTH_ERROR; not production enabled |
 | Facebook Pages | Published authorized feed adapter tested; four actual Page feeds permission-blocked (10), local BLOCKED_PERMISSION; no live ingestion |
 | Instagram Professional | Facebook Login media/caption adapter tested; no linked IG User ID returned through authorized Pages, live ingestion BLOCKED |
+| Apify | Runtime identity validated; bridge/Actor registry/async acquisition implemented and mock-tested; paid live Actor/output validation awaits OWNER approval |
 | OpenAI | Credential/models validation adapter; no supplied key or live generation proof |
 | Templates / scoring / Pages artifacts / manual handoff | Operational built-ins |
 | Reddit, X, Web/Search, Jobs, Email, WhatsApp, independent Workers jobs | Registry entries only, `DOCUMENTATION_REQUIRED`; no fake live connectors |
@@ -71,6 +79,17 @@ curl http://localhost:3000/api/health
 ```
 Ignored `.dev.vars` can define `ENVIRONMENT=development`, `SIGNUP_ENABLED=true`, a random `CREDENTIAL_MASTER_KEY`, and optional `REGISTRATION_TOKEN`. Never commit local secrets. Keys are not necessary for deterministic V0.
 
+## Apify acquisition routes (authenticated, workspace scoped)
+- `GET /api/acquisitions/actors`: eight slots, configured boolean, metadata and reservation gates; no token.
+- `GET /api/acquisitions/discover?q=`: OWNER read-only Store discovery, max 5 candidates.
+- `POST /api/acquisitions/actors`: OWNER capability + Actor ID + profile + confirm; inspect only.
+- `POST /api/acquisitions/actors/:id/review|enable|disable`: separate human terms/review and live-run gating.
+- `POST /api/acquisitions`: OWNER reviewed registry_id/actor_revision, query (one public video), UTC dates, max_items (1–25), max_pages=1, timeout_seconds (30–180), max_charge_usd (explicit up to 1), validation_run boolean, confirm, authorize_spend and idempotency_key.
+- `GET /api/acquisitions`: job/Actor/run/dataset/query fingerprint/bounds/results/usage/cost history and yield.
+- `GET /api/acquisitions/:id/evidence`: provenance receipts, including deterministic deduplicates.
+- `POST /api/acquisitions/:id/cancel`: confirmation; abort requested, not automatically confirmed/refunded.
+Request-driven polling only; no independent cron. PPE ceiling limits Actor charge, platform fees may be additional. UNKNOWN start outcomes are not retried; inspect Apify console before any new execution.
+
 ## Functional routes
 UI `/` hashes: `#feed`, `#opportunities`, `#execution`, `#distribution`, `#outcomes`, `#settings`.
 Public: `GET /api/health`, `GET /demo/:token` (safe published artifact only).
@@ -90,14 +109,14 @@ All workspace IDs are authorized against server membership. Stable envelopes inc
 
 ## Architecture / storage
 Client → Hono API → core services → adapters / D1 jobs. Runtime uses Web APIs, no local filesystem/Node servers.
-D1: users, sessions, auth_attempts, workspaces, workspace_members, providers (encrypted credentials), sources, signals, opportunities, opportunity_scores, executions, execution_artifacts, distributions, outcomes, usage_events, audit_events, jobs, settings, provider_scaffolds, intelligence_assessments.
+D1: users, sessions, auth_attempts, workspaces, workspace_members, providers (encrypted credentials), sources, signals, opportunities, opportunity_scores, executions, execution_artifacts, distributions, outcomes, usage_events, audit_events, jobs, settings, provider_scaffolds, intelligence_assessments, actor_registry, acquisition_jobs, acquisition_signals. Apify token stays in managed runtime secrets, not database.
 Demos serve stored artifacts, not independent customer deployments. Visitor task/form data is session-local unless visitors export their own JSON file; ORDVELA's operational state is durable D1.
 
 ## Verification
-- Build and TypeScript: PASS; worker approximately 116 kB uncompressed.
-- `npm test`: 37/37 PASS, including provider/generator/normalization/credential/AI-grounding contracts and durable lifecycle.
+- Build and TypeScript: PASS; worker approximately 151 kB uncompressed.
+- `npm test`: 51/51 PASS, including provider/generator/normalization/credential/AI-grounding contracts and durable lifecycle.
 - `npm run test:e2e`: 320 assertions PASS (final repeat 312, both successful; polling-dependent count) in recorded run (poll timing can increase assertion count).
-- `npm run test:browser`: 42 checks PASS; desktop 1440×1000 / mobile 390×844.
+- `npm run test:browser`: 48 checks PASS; desktop 1440×1000 / mobile 390×844.
 - `npm run test:production`: 77 checks PASS using isolated archived QA workspace and secure `TEST_REGISTRATION_TOKEN` environment.
 - `node tests/production-browser.mjs`: 14 authenticated read-only production checks PASS; secure operator credentials supplied only through environment.
 - Live Groq assessment: PASS, one exact grounded quote, 264 input / 159 output tokens in recorded successful call. Supplied key was not installed into production.
