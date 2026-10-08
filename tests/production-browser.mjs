@@ -1,0 +1,13 @@
+import {chromium} from 'playwright'
+import assert from 'node:assert/strict'
+import {mkdir,writeFile} from 'node:fs/promises'
+const BASE='https://ordvela.pages.dev',email=process.env.TEST_OPERATOR_EMAIL,password=process.env.TEST_OPERATOR_PASSWORD;
+if(!email||!password)throw Error('BLOCKED: operator browser smoke credentials must come from secure environment.');
+const browser=await chromium.launch({headless:true,args:['--no-sandbox']});let checks=0,stage='authentication';const errors=[];
+try{
+ const r=await fetch(BASE+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});if(!r.ok)throw Error('Authentication smoke failed');const set=r.headers.get('set-cookie'),session=set?.split(';')[0]?.split('=')[1];if(!session)throw Error('Secure session missing');
+ const context=await browser.newContext({viewport:{width:1440,height:1000}});await context.addCookies([{name:'ordvela_session',value:session,url:BASE,httpOnly:true,secure:true,sameSite:'Strict'}]);const page=await context.newPage();page.on('pageerror',()=>errors.push('runtime-page-error'));
+ stage='initial cockpit';await page.goto(BASE);await page.waitForSelector('#workspace-switch');assert.ok((await page.locator('#workspace-switch').textContent()).includes('ORDVELA'));checks++;
+ for(const viewport of [{width:1440,height:1000},{width:390,height:844}]){await page.setViewportSize(viewport);for(const route of ['feed','opportunities','execution','distribution','outcomes','settings']){stage=route+' '+viewport.width;await page.click(`a[href="#${route}"]`);await page.waitForSelector('#main-content h1');assert.ok(!(await page.locator('#main-content').textContent()).includes('Operasi belum berhasil'));const size=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));if(size.scroll>size.width+2)console.log(JSON.stringify({stage,viewport:size}));assert.ok(size.scroll<=size.width+2);checks++}}
+ assert.equal(errors.length,0);checks++;await mkdir('test-results',{recursive:true});const summary={result:'PASS',checks,environment:'production',base:BASE,mode:'authenticated operator / read-only',desktop:'1440x1000',mobile:'390x844',unexpected_page_errors:errors.length};await writeFile('test-results/production-browser-summary.json',JSON.stringify(summary,null,2));console.log(JSON.stringify(summary,null,2));await context.close();
+}catch(e){console.error(JSON.stringify({production_browser:'FAILED',stage,checks,error_type:e.name,unexpected_page_errors:errors.length,credential_values:'suppressed'}));process.exitCode=1}finally{await browser.close()}
