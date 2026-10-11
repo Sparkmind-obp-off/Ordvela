@@ -24,6 +24,10 @@
 9. [Acceptance Test Matrix](71_ORDVELA_ACCEPTANCE_TEST_MATRIX.md) — required scenarios; only executed tests may be reported as passing.
 10. [Decision Log](72_ORDVELA_COMMAND_CENTER_DECISION_LOG.md) — durable product and architecture decisions.
 
+## Master session handoff
+
+Use [Master Session Prompt + Secrets Owner](74_ORDVELA_MASTER_SESSION_PROMPT_SECRETS_OWNER.md) when continuing work in a new AI/Genspark session. It requires a current-state audit, one vertical slice, and a Secrets & Configuration Register. Owner transparency means clear names, purpose, status, secure management steps and validation evidence; raw credential values must never be printed into chat, logs, UI or repository.
+
 ## Product model in one sentence
 
 ORDVELA is one AI Intelligence & Agent Command Center: the dashboard observes and prioritizes, AI Workspace investigates and prepares, and Agent Runtime executes approved bounded actions and records outcomes.
