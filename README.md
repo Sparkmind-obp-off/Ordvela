@@ -10,6 +10,8 @@ ORDVELA remains the canonical product and repository. The roadmap now evolves th
 
 Architecture decision and phased implementation gates: [Unified ORDVELA AI Workspace Architecture](docs/63_UNIFIED_ORDVELA_AI_WORKSPACE_ARCHITECTURE.md).
 
+Complete command-center documentation pack and index: [ORDVELA Command Center Documentation Index](docs/73_ORDVELA_COMMAND_CENTER_DOCUMENTATION_INDEX.md).
+
 This is an accepted product direction, not a claim that chat/agent integration is already implemented or deployed in ORDVELA. Existing release status below remains the verified status until implementation and acceptance tests prove otherwise.
 
 ## RapidAPI Acquisition Bridge v0.1 · application v0.5

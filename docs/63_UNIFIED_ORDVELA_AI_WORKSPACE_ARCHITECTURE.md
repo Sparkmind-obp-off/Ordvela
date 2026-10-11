@@ -94,3 +94,18 @@ Run existing tests plus provider, workspace isolation, prompt-injection, approva
 ## Reporting requirements
 
 For every implementation session, report: files changed, tests actually executed and results, live integrations actually verified, credentials needed by variable name only, migration/deployment status, blockers, and next action. Do not claim production readiness while critical security or deployment checks remain incomplete.
+
+## Command Center documentation pack
+
+The accepted product direction is specified in the following companion documents. They define target behavior and release gates; they do not imply implementation is already complete.
+
+- [Command Center Product Vision](64_ORDVELA_COMMAND_CENTER_PRODUCT_VISION.md)
+- [Product Requirements (PRD)](65_ORDVELA_COMMAND_CENTER_PRD.md)
+- [Information Architecture and UX](66_ORDVELA_COMMAND_CENTER_INFORMATION_ARCHITECTURE.md)
+- [Agent Runtime and Execution Contract](67_ORDVELA_AGENT_RUNTIME_EXECUTION_CONTRACT.md)
+- [Security and Data Governance](68_ORDVELA_SECURITY_DATA_GOVERNANCE.md)
+- [Provider and Connector Policy](69_ORDVELA_PROVIDER_CONNECTOR_POLICY.md)
+- [Implementation Roadmap and Release Gates](70_ORDVELA_IMPLEMENTATION_ROADMAP_RELEASE_GATES.md)
+- [Acceptance Test Matrix](71_ORDVELA_ACCEPTANCE_TEST_MATRIX.md)
+- [Decision Log](72_ORDVELA_COMMAND_CENTER_DECISION_LOG.md)
+- [Documentation Index](73_ORDVELA_COMMAND_CENTER_DOCUMENTATION_INDEX.md)
