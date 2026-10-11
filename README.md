@@ -4,6 +4,14 @@
 
 **V0 implemented. V1 live on Cloudflare BYOK. V2 provider operating layer implemented, selected live access still requires credentials/approval.** No replacement repository, master brand or custom domain.
 
+## Unified AI Assistant + Agent direction
+
+ORDVELA remains the canonical product and repository. The roadmap now evolves the existing demand-intelligence system into a unified assistant/agent platform; it does not create a second ORDVELA product. The separate [AI-Workspace repository](https://github.com/Sparkmind-obp-off/AI-Workspace) is a reference implementation only. Preserve ORDVELA's current production workflows, data, authentication, provider registry, quotas, and approval controls while adapting compatible assistant/agent capabilities incrementally.
+
+Architecture decision and phased implementation gates: [Unified ORDVELA AI Workspace Architecture](docs/63_UNIFIED_ORDVELA_AI_WORKSPACE_ARCHITECTURE.md).
+
+This is an accepted product direction, not a claim that chat/agent integration is already implemented or deployed in ORDVELA. Existing release status below remains the verified status until implementation and acceptance tests prove otherwise.
+
 ## RapidAPI Acquisition Bridge v0.1 · application v0.5
 Server-side adapter, provider-neutral configuration/quota/run/receipt tables, FREE-FIRST recommendation router, derived provider evaluations and existing intelligence integration implemented. Apify retained. Runtime `RAPIDAPI_KEY` is a managed server secret, never a frontend field/value or raw D1 credential. Global secret-reflection input guard and safe logging added.
 
