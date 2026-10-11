@@ -28,6 +28,10 @@
 
 Use [Master Session Prompt + Secrets Owner](74_ORDVELA_MASTER_SESSION_PROMPT_SECRETS_OWNER.md) when continuing work in a new AI/Genspark session. It requires a current-state audit, one vertical slice, and a Secrets & Configuration Register. Owner transparency means clear names, purpose, status, secure management steps and validation evidence; raw credential values must never be printed into chat, logs, UI or repository.
 
+## Genspark / MainFunc master system prompt
+
+Use [Master System Prompt — Genspark / MainFunc](76_GENSPARK_MAINFUNC_MASTER_SYSTEM_PROMPT_CURRENT_STATE.md) to continue implementation from the reported AI Context Preview state. It requires independent patch verification, safe preservation of work, repeatable tests, a Secrets Owner register, and a gated path toward persistent chat and quota-controlled provider calls.
+
 ## Session handoff and current state
 
 See [Session Handoff Report](75_ORDVELA_COMMAND_CENTER_SESSION_HANDOFF_2026-10-11.md) for the documentation work completed, Git divergence status, explicit non-deployment boundary, and the next safe execution sequence.
