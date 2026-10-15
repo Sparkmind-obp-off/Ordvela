@@ -1,0 +1,101 @@
+openapi: 3.1.0
+info:
+  title: Opportunity API Starter
+  version: 0.1.0
+  description: >
+    Small, reusable API for scoring publicly evidenced business opportunities.
+    It does not scrape sources, send messages, or guarantee buying intent.
+servers:
+  - url: https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Service is healthy
+  /openapi.json:
+    get:
+      summary: Get machine-readable OpenAPI schema
+      responses:
+        "200":
+          description: OpenAPI 3.1 document
+  /v1/score:
+    post:
+      summary: Score a business opportunity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScoreRequest"
+            example:
+              businessName: "Contoh usaha"
+              sourceUrl: "https://example.com"
+              hasWebsite: false
+              hasDigitalCatalog: false
+              publicPainSignals: 1
+              recentBuyingIntent: false
+              contactChannelAvailable: true
+      responses:
+        "200":
+          description: Heuristic score and explanation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreResponse"
+        "400":
+          description: Invalid request
+        "401":
+          description: Missing or invalid bearer token
+        "503":
+          description: API_TOKEN secret is not configured
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    ScoreRequest:
+      type: object
+      additionalProperties: false
+      required: [businessName]
+      properties:
+        businessName:
+          type: string
+          minLength: 1
+          maxLength: 160
+        sourceUrl:
+          type: string
+          format: uri
+          maxLength: 2048
+        hasWebsite:
+          type: boolean
+        hasDigitalCatalog:
+          type: boolean
+        publicPainSignals:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: Count of observed public pain signals, capped at three.
+        recentBuyingIntent:
+          type: boolean
+        contactChannelAvailable:
+          type: boolean
+        notes:
+          type: string
+          maxLength: 1000
+    ScoreResponse:
+      type: object
+      required: [businessName, score, priority, reasons, disclaimer]
+      properties:
+        businessName: { type: string }
+        sourceUrl: { type: [string, "null"] }
+        score: { type: integer, minimum: 0, maximum: 100 }
+        priority: { type: string, enum: [low, medium, high] }
+        reasons:
+          type: array
+          items: { type: string }
+        disclaimer: { type: string }
