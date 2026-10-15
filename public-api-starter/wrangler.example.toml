@@ -1,0 +1,8 @@
+name = "opportunity-api-starter"
+main = "src/index.ts"
+compatibility_date = "2026-10-15"
+
+[vars]
+ALLOWED_ORIGIN = "https://your-frontend.example"
+# Set API_TOKEN with: npx wrangler secret put API_TOKEN
+# Do not put API_TOKEN in this file or in frontend code.

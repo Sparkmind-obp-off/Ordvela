@@ -1,0 +1,10 @@
+{
+  "businessName": "Contoh usaha",
+  "sourceUrl": "https://example.com",
+  "hasWebsite": false,
+  "hasDigitalCatalog": false,
+  "publicPainSignals": 1,
+  "recentBuyingIntent": false,
+  "contactChannelAvailable": true,
+  "notes": "Example payload only; replace with evidence verified by a human."
+}
